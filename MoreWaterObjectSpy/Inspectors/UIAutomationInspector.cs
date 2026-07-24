@@ -34,6 +34,22 @@ public static class UIAutomationInspector
                 return info;
             }
 
+            return BuildInfo(el);
+        }
+        catch (Exception ex)
+        {
+            info.Available = false;
+            info.Error = ex.Message;
+        }
+        return info;
+    }
+
+    /// <summary>Construye UIAutomationInfo a partir de un AutomationElement (reusable por el arbol).</summary>
+    public static UIAutomationInfo BuildInfo(AutomationElement el)
+    {
+        var info = new UIAutomationInfo();
+        try
+        {
             var c = el.Current;
             info.Available = true;
             info.Name = c.Name ?? "";
