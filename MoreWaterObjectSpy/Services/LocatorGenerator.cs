@@ -7,7 +7,7 @@ namespace MoreWaterObjectSpy.Services;
 ///
 /// Reglas duras aprendidas en campo:
 ///  - NUNCA usar el WindowTitle de Win32 como Name del control: en WPF eso es el titulo de la
-///    ventana raiz (p.ej. "XposBackOffice") y produce un locator que apunta a toda la ventana.
+///    ventana raiz (p.ej. "MainWindow") y produce un locator que apunta a toda la ventana.
 ///  - En WPF el control no tiene HWND propio (NativeHandle=0) -> HWND/Win32 no sirven como locator.
 ///  - Sin Name ni AutomationId, la mejor opcion es XPath por ClassName/ControlType, anclado al
 ///    ancestro identificable para acotar. Advertir siempre que puede haber varios y hay que indexar.

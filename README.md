@@ -1,7 +1,7 @@
 # MoreWater Object Spy
 
-Herramienta de inspección de objetos de UI para **QA Automation con Winium**, orientada a aplicaciones
-de escritorio Windows: **Delphi/Win32** (FrameworkXPOS) y **WPF** (Oxxo.BackOffice).
+Herramienta de inspección de objetos de UI para **QA Automation con Winium**, para cualquier aplicación
+de escritorio Windows: **Delphi/Win32**, **WPF**, **WinForms** y **UWP/WinUI**.
 
 Captura el objeto bajo un clic global —aunque la ventana cambie o se abra un modal— y genera
 **locators listos para Winium/WinAppDriver** (`By.id`, `By.name`, `By.className`, `By.xpath`),

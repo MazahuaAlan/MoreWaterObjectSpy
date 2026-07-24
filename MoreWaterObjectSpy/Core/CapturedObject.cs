@@ -106,7 +106,7 @@ public class CapturedObject
         get
         {
             // Solo el Name del CONTROL (UIA). No caer al titulo de la ventana Win32:
-            // en WPF eso seria "XposBackOffice" para todos los controles.
+            // en WPF eso seria el titulo de la ventana raiz (p.ej. "MainWindow") para todos los controles.
             var name = !string.IsNullOrWhiteSpace(UiAutomation.Name) ? UiAutomation.Name
                      : !string.IsNullOrWhiteSpace(UiAutomation.AutomationId) ? "#" + UiAutomation.AutomationId
                      : "";
