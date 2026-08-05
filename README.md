@@ -10,6 +10,7 @@
   <img alt=".NET 8" src="https://img.shields.io/badge/.NET-8.0-512BD4">
   <img alt="C#" src="https://img.shields.io/badge/C%23-WinForms-239120">
   <img alt="Windows" src="https://img.shields.io/badge/Windows-Desktop-0078D6">
+  <img alt="Licencia MIT" src="https://img.shields.io/badge/licencia-MIT-blue">
   <img alt="Estado" src="https://img.shields.io/badge/estado-activo-2ea44f">
 </p>
 
@@ -75,8 +76,13 @@ dotnet run --project MoreWaterObjectSpy
 - **Extensión a Web** → adaptador DOM (Selenium / Playwright) reutilizando la lógica de ranking, unicidad e índice.
 - Validación de locator en vivo, screenshots por captura, CI.
 
+## Licencia
+
+Software de **uso libre** bajo licencia **MIT** — puedes usarlo, modificarlo y distribuirlo;
+solo conserva el aviso de copyright. Ver [`LICENSE`](LICENSE).
+
 ---
 
 <p align="center">
-  By <strong>MazahuaAlan</strong> · <a href="https://github.com/MazahuaAlan">github.com/MazahuaAlan</a>
+  MIT © <strong>MazahuaAlan</strong>
 </p>
