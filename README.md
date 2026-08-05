@@ -1,37 +1,82 @@
-# MoreWater Object Spy
+<h1 align="center">MoreWater Object Spy</h1>
 
-Herramienta de inspección de objetos de UI para **QA Automation con Winium**, para cualquier aplicación
-de escritorio Windows: **Delphi/Win32**, **WPF**, **WinForms** y **UWP/WinUI**.
+<p align="center">
+  <strong>Inspector de objetos de UI para QA Automation.</strong><br>
+  Captura el objeto en el <em>instante del clic</em> —aunque la ventana cambie o se abra un modal—<br>
+  y genera <strong>locators listos para Winium/WinAppDriver</strong>, rankeados por estabilidad y unicidad.
+</p>
 
-Captura el objeto bajo un clic global —aunque la ventana cambie o se abra un modal— y genera
-**locators listos para Winium/WinAppDriver** (`By.id`, `By.name`, `By.className`, `By.xpath`),
-rankeados por estabilidad.
+<p align="center">
+  <img alt=".NET 8" src="https://img.shields.io/badge/.NET-8.0-512BD4">
+  <img alt="C#" src="https://img.shields.io/badge/C%23-WinForms-239120">
+  <img alt="Windows" src="https://img.shields.io/badge/Windows-Desktop-0078D6">
+  <img alt="Estado" src="https://img.shields.io/badge/estado-activo-2ea44f">
+</p>
 
-## Motores de inspección
-- **UI Automation (UIA)** — WPF, WinForms, UWP/XAML, Win32 (reporta `FrameworkId`).
-- **MSAA (IAccessible)** — red de seguridad para Delphi/VCL cuando UIA no expone el control.
-- **Win32 API** — snapshot inmediato (HWND, ClassName, título, PID) en el instante del clic.
+---
+
+## ¿Por qué existe?
+
+Inspect.exe, UISpy o Accessibility Insights **pierden el objeto** cuando la aplicación cambia de ventana, abre un modal
+o roba el foco — justo lo más común en apps de escritorio reales. Y cuando sí lo encuentran, **solo muestran propiedades**:
+el locator hay que armarlo y depurarlo a mano.
+
+**MoreWater Object Spy** toma un *snapshot inmutable* del objeto en el instante del clic (sobrevive aunque la ventana
+desaparezca) y te entrega el **locator recomendado**, verificando además que sea **único**.
 
 ## Características
-- Captura global por clic (F8) y captura con cuenta regresiva / bajo cursor (F9) para menús que se cierran.
-- **Locators rankeados** por estabilidad con advertencias (multiplicidad, idioma, volatilidad del HWND).
-- **Promoción a ancestro accionable**: si clicas el texto dentro de un botón, sube al botón real.
-- Sugerencia de acción por *pattern* (`Invoke`→`click()`, `Value`→`sendKeys()`).
-- Historial de capturas + exportación a **JSON**.
+
+| | |
+|---|---|
+| 🎯 **Captura global** | F8 (al clic) o F9 / "Capturar en 3s" (bajo cursor, para menús que se cierran). |
+| 🧩 **3 motores** | UI Automation + MSAA + Win32 — red de seguridad para controles Delphi/VCL. |
+| 🏷️ **Locators rankeados** | `By.id` / `By.name` / `By.className` / `By.xpath`, ordenados por estabilidad. |
+| 🔢 **Unicidad + índice** | Cuenta coincidencias y, si hay varias, da el **índice correcto** (XPath `[n]` y `findElements().get(i)`). |
+| ⬆️ **Promoción inteligente** | Si clicas el texto dentro de un botón, sube solo al control accionable. |
+| 🌳 **Árbol de objetos** | Explora toda la ventana con carga perezosa. |
+| 🔴 **Resaltado en pantalla** | Dibuja el elemento seleccionado, como Inspect.exe. |
+| 💾 **Exportación JSON** | Historial completo de capturas reutilizable. |
+
+## Motores de inspección
+
+| Motor | Expone | Cubre |
+|---|---|---|
+| **UI Automation** | Name, AutomationId, ControlType, FrameworkId, patterns, árbol | WPF, WinForms, UWP/XAML, Win32 |
+| **MSAA** | Role, State, Name, Value, DefaultAction | Delphi/VCL y apps legacy |
+| **Win32** | HWND, ClassName, título, PID | Cualquier ventana nativa |
 
 ## Requisitos
-- .NET SDK 8.0
+
+- .NET SDK **8.0**
 - Windows
 
 ## Uso
+
 ```powershell
 cd MoreWaterObjectSpy
 dotnet run --project MoreWaterObjectSpy
 ```
+
 1. **F8** inicia la captura global.
 2. Haz clic en cualquier control de la app objetivo.
-3. Revisa propiedades (UIA / MSAA / Win32) y copia el locator recomendado.
-4. Exporta el historial a JSON.
+3. Revisa propiedades (UIA / MSAA / Win32) y copia el **locator recomendado**.
+4. Explora la pestaña **Árbol** o exporta el historial a **JSON**.
+
+> Si la app objetivo corre como administrador, ejecuta también la spy como administrador.
+
+## Documentación
+
+- [`docs/DOCUMENTACION_TECNICA.md`](docs/DOCUMENTACION_TECNICA.md) — arquitectura, flujo de captura y lógica de locators.
+
+## Hoja de ruta
+
+- **Grabador de acciones** → genera el script Winium completo (clic → escribir → clic).
+- **Multi-framework** → exportar a WinAppDriver, FlaUI y Appium.
+- **Extensión a Web** → adaptador DOM (Selenium / Playwright) reutilizando la lógica de ranking, unicidad e índice.
+- Validación de locator en vivo, screenshots por captura, CI.
 
 ---
-By **MazahuaAlan** · https://github.com/MazahuaAlan
+
+<p align="center">
+  By <strong>MazahuaAlan</strong> · <a href="https://github.com/MazahuaAlan">github.com/MazahuaAlan</a>
+</p>

@@ -101,15 +101,14 @@ public class MainForm : Form
         var lnk = new LinkLabel
         {
             Dock = DockStyle.Fill,
-            Text = "By MazahuaAlan  ·  github.com/MazahuaAlan",
+            Text = "By MazahuaAlan",
             TextAlign = ContentAlignment.MiddleRight,
             Padding = new Padding(0, 0, 12, 0),
             Font = new Font("Segoe UI", 8.5f),
             LinkColor = Color.FromArgb(0, 102, 204)
         };
-        lnk.Links.Add(3, 11, "https://github.com/MazahuaAlan");
-        lnk.Links.Add(20, 20, "https://github.com/MazahuaAlan");
-        lnk.LinkClicked += (_, e) => OpenUrl(e.Link?.LinkData as string ?? "https://github.com/MazahuaAlan");
+        lnk.Links.Add(3, 11, "https://github.com/MazahuaAlan/MoreWaterObjectSpy"); // "MazahuaAlan" -> repositorio
+        lnk.LinkClicked += (_, e) => OpenUrl(e.Link?.LinkData as string ?? "https://github.com/MazahuaAlan/MoreWaterObjectSpy");
         footer.Controls.Add(lnk);
 
         Controls.Add(tabs);
@@ -507,6 +506,8 @@ public class MainForm : Form
                          : "";
                 sb.AppendLine($"{star}#{c.Rank} [{c.Stability}]{uniq} {c.Strategy}");
                 sb.AppendLine($"     {c.Locator}");
+                if (!string.IsNullOrWhiteSpace(c.Alt))
+                    sb.AppendLine($"     alt (API, índice 0-based): {c.Alt}");
                 if (!string.IsNullOrWhiteSpace(c.Warning))
                     sb.AppendLine($"     ⚠ {c.Warning}");
                 sb.AppendLine();

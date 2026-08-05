@@ -168,14 +168,6 @@ public static class LocatorGenerator
             var c = Add(list, "Name (caption del control)" + tag, "Alta",
                 "Se rompe si cambia el texto/idioma", $"By.name(\"{Esc(t.Name)}\")", action);
             Annotate(c, uniq?.Name);
-            // Si el Name se repite, ofrecer XPath indexado por Name con el indice real
-            if (uniq != null && uniq.Name.Count > 1 && uniq.Name.Index > 0)
-            {
-                var xp = $"(//{elTag}[@Name='{Esc(t.Name)}'])[{uniq.Name.Index}]";
-                var ci = Add(list, "XPath indexado por Name (coincidencia unica)" + tag, "Alta",
-                    null, $"By.xpath(\"{Esc(xp)}\")", action);
-                ci.MatchCount = 1; ci.MatchIndex = uniq.Name.Index; ci.Unique = true;
-            }
         }
 
         // 3) XPath anclado al ancestro identificable (unicidad no verificada)
@@ -195,32 +187,49 @@ public static class LocatorGenerator
         if (!string.IsNullOrWhiteSpace(t.ClassName))
         {
             var c = Add(list, "By.className (alternativa simple)" + tag, "Baja",
-                "Devuelve el primero que coincida; si hay varios, usar el XPath indexado", $"By.className(\"{Esc(t.ClassName)}\")", action);
+                "Devuelve el primero que coincida; si hay varios, usar el indice", $"By.className(\"{Esc(t.ClassName)}\")", action);
             Annotate(c, uniq?.Cls);
         }
 
-        // 5) XPath por ClassName — se vuelve INDEXADO y unico si hay varios de la misma clase
-        if (!string.IsNullOrWhiteSpace(t.ClassName))
-        {
-            if (uniq != null && uniq.Cls.Count > 1 && uniq.Cls.Index > 0)
-            {
-                var xp = $"(//{elTag}[@ClassName='{Esc(t.ClassName)}'])[{uniq.Cls.Index}]";
-                var c = Add(list, $"XPath indexado por ClassName (#{uniq.Cls.Index} de {uniq.Cls.Count}, unico)" + tag, "Alta",
-                    null, $"By.xpath(\"{Esc(xp)}\")", action);
-                c.MatchCount = 1; c.MatchIndex = uniq.Cls.Index; c.Unique = true;
-            }
-            else
-            {
-                var c = Add(list, "XPath por ClassName" + tag, "Baja",
-                    "Combinar con ancestro o indice si hay varios", $"By.xpath(\"//{elTag}[@ClassName='{Esc(t.ClassName)}']\")", action);
-                Annotate(c, uniq?.Cls);
-            }
-        }
+        // 5) INDICE DETERMINISTICO — solo si NINGUN atributo es unico por si solo.
+        //    Se indexa sobre el atributo mas selectivo/estable (menor nº de coincidencias;
+        //    a igualdad, AutomationId > Name > ClassName). Se muestran ambas formas: XPath [n]
+        //    (1-based) y findElements(...).get(n-1) (0-based).
+        AddDeterministicIndex(list, t, uniq, tag, action);
 
         // 6) HWND: solo Win32 real (no WPF sin ventana) y si no es la ventana raiz
         if (!isWpf && w.Hwnd != "0x0" && w.Hwnd != w.RootHwnd)
             Add(list, "HWND (volatil, solo sesion actual)", "Volatil",
                 "El handle cambia en cada ejecucion; no usar en scripts", $"// HWND: {w.Hwnd}", action);
+    }
+
+    /// <summary>Genera el locator indexado usando la mejor base disponible (menos coincidencias + mas estable).</summary>
+    private static void AddDeterministicIndex(List<LocatorCandidate> list, Target t, Uniq? uniq, string tag, string action)
+    {
+        if (uniq == null) return;
+
+        // (atributo XPath, metodo By, valor, count, indice 1-based, peso estabilidad: menor = mejor)
+        var bases = new List<(string attr, string by, string val, int count, int index, int weight)>();
+        if (!string.IsNullOrWhiteSpace(t.AutomationId) && uniq.Id.Count > 0 && uniq.Id.Index > 0)
+            bases.Add(("AutomationId", "id", t.AutomationId, uniq.Id.Count, uniq.Id.Index, IsNumeric(t.AutomationId) ? 3 : 0));
+        if (!string.IsNullOrWhiteSpace(t.Name) && uniq.Name.Count > 0 && uniq.Name.Index > 0)
+            bases.Add(("Name", "name", t.Name, uniq.Name.Count, uniq.Name.Index, 1));
+        if (!string.IsNullOrWhiteSpace(t.ClassName) && uniq.Cls.Count > 0 && uniq.Cls.Index > 0)
+            bases.Add(("ClassName", "className", t.ClassName, uniq.Cls.Count, uniq.Cls.Index, 2));
+
+        // Si alguno ya es unico por si solo, no hace falta indexar (ese candidato ya gana el ranking).
+        if (bases.Count == 0 || bases.Any(b => b.count == 1)) return;
+
+        // Mejor base: menos coincidencias; a igualdad, el mas estable (menor peso).
+        var best = bases.OrderBy(b => b.count).ThenBy(b => b.weight).First();
+        var elTag = XTag(t.ControlType);
+        var xp = $"(//{elTag}[@{best.attr}='{Esc(best.val)}'])[{best.index}]";
+        var alt = $"driver.findElements(By.{best.by}(\"{Esc(best.val)}\")).get({best.index - 1});";
+
+        var c = Add(list, $"Índice determinístico sobre {best.attr} (#{best.index} de {best.count}, único)" + tag,
+            "Alta", null, $"By.xpath(\"{Esc(xp)}\")", action);
+        c.Unique = true; c.MatchCount = 1; c.MatchIndex = best.index;
+        c.Alt = alt; // forma 0-based con la API de Selenium/Winium
     }
 
     /// <summary>Anota conteo/indice de coincidencias y ajusta estabilidad/advertencia.</summary>

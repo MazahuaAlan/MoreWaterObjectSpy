@@ -1,0 +1,323 @@
+<title>MoreWater Object Spy — Documentación Técnica</title>
+<style>
+  :root{
+    --ground:#f6f7f9; --surface:#ffffff; --surface-2:#f0f2f5;
+    --ink:#171a1f; --muted:#5b616e; --line:#e3e6ec;
+    --accent:#d83a3f; --accent-soft:#fbe9ea; --accent-ink:#b02a2f;
+    --code-bg:#0f1218; --code-ink:#e7ebf2; --code-dim:#8a94a6; --code-key:#ff8f93; --code-str:#8fd6a0;
+    --shadow:0 1px 2px rgba(20,24,32,.05),0 8px 24px rgba(20,24,32,.06);
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --ground:#101318; --surface:#171b21; --surface-2:#1c212a;
+      --ink:#e6e9ef; --muted:#98a0ad; --line:#282e38;
+      --accent:#ff5b60; --accent-soft:#2a1719; --accent-ink:#ff8b8f;
+      --code-bg:#0b0e13; --code-ink:#e7ebf2; --code-dim:#7a8496; --code-key:#ff8f93; --code-str:#8fd6a0;
+      --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 32px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="light"]{
+    --ground:#f6f7f9; --surface:#ffffff; --surface-2:#f0f2f5;
+    --ink:#171a1f; --muted:#5b616e; --line:#e3e6ec;
+    --accent:#d83a3f; --accent-soft:#fbe9ea; --accent-ink:#b02a2f;
+    --code-bg:#0f1218; --code-ink:#e7ebf2; --code-dim:#8a94a6;
+    --shadow:0 1px 2px rgba(20,24,32,.05),0 8px 24px rgba(20,24,32,.06);
+  }
+  :root[data-theme="dark"]{
+    --ground:#101318; --surface:#171b21; --surface-2:#1c212a;
+    --ink:#e6e9ef; --muted:#98a0ad; --line:#282e38;
+    --accent:#ff5b60; --accent-soft:#2a1719; --accent-ink:#ff8b8f;
+    --code-bg:#0b0e13; --code-ink:#e7ebf2; --code-dim:#7a8496;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 32px rgba(0,0,0,.35);
+  }
+
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0; background:var(--ground); color:var(--ink);
+    font-family:"Segoe UI",system-ui,-apple-system,"Helvetica Neue",sans-serif;
+    line-height:1.6; font-size:16px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:ui-monospace,"Cascadia Code","SF Mono",Consolas,"Liberation Mono",monospace}
+
+  .wrap{width:100%;max-width:880px;margin:0 auto;padding:0 24px}
+
+  /* ---------- header ---------- */
+  header{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+  header .crosshair{
+    position:absolute;inset:0;pointer-events:none;opacity:.5;
+  }
+  .hd{position:relative;padding:64px 0 52px}
+  .eyebrow{
+    font-family:ui-monospace,Consolas,monospace;font-size:12px;letter-spacing:.22em;
+    text-transform:uppercase;color:var(--accent);font-weight:600;margin:0 0 20px
+  }
+  h1{
+    font-size:clamp(38px,6vw,60px);line-height:1.02;letter-spacing:-.03em;
+    font-weight:800;margin:0;text-wrap:balance
+  }
+  h1 .spy{
+    display:inline-block;position:relative;
+    border:2px solid var(--accent);border-radius:4px;padding:0 .12em;
+    box-shadow:0 0 0 4px var(--accent-soft)
+  }
+  h1 .spy::before,h1 .spy::after{
+    content:"";position:absolute;width:7px;height:7px;background:var(--accent);border-radius:1px
+  }
+  h1 .spy::before{top:-4px;left:-4px}
+  h1 .spy::after{bottom:-4px;right:-4px}
+  .lede{font-size:clamp(17px,2.4vw,21px);color:var(--muted);max-width:60ch;margin:22px 0 0;text-wrap:pretty}
+  .specline{
+    display:flex;flex-wrap:wrap;gap:8px 10px;margin-top:30px;
+    font-family:ui-monospace,Consolas,monospace;font-size:12.5px
+  }
+  .chip{
+    border:1px solid var(--line);background:var(--surface);border-radius:999px;
+    padding:5px 12px;color:var(--muted);white-space:nowrap
+  }
+  .chip b{color:var(--ink);font-weight:600}
+
+  /* ---------- section scaffolding ---------- */
+  section{padding:52px 0;border-bottom:1px solid var(--line)}
+  .tag{
+    font-family:ui-monospace,Consolas,monospace;font-size:12px;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--muted);font-weight:600;margin:0 0 14px;
+    display:flex;align-items:center;gap:10px
+  }
+  .tag::before{content:"";width:22px;height:2px;background:var(--accent);border-radius:2px}
+  h2{font-size:clamp(23px,3.4vw,30px);line-height:1.15;letter-spacing:-.02em;font-weight:750;margin:0 0 14px;text-wrap:balance}
+  h2{font-weight:800}
+  p{margin:0 0 16px;max-width:66ch}
+  p .hl{color:var(--ink);font-weight:600;background:linear-gradient(transparent 62%,var(--accent-soft) 62%)}
+  strong{font-weight:700}
+  a{color:var(--accent-ink);text-decoration-color:color-mix(in srgb,var(--accent) 40%,transparent);text-underline-offset:3px}
+
+  /* ---------- problem before/after ---------- */
+  .split{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px}
+  @media(max-width:620px){.split{grid-template-columns:1fr}}
+  .panel{border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:20px;box-shadow:var(--shadow)}
+  .panel h3{margin:0 0 8px;font-size:14px;font-family:ui-monospace,Consolas,monospace;letter-spacing:.04em;text-transform:uppercase}
+  .panel.bad h3{color:var(--muted)} .panel.good h3{color:var(--accent)}
+  .panel p{font-size:14.5px;color:var(--muted);margin:0}
+
+  /* ---------- capture flow ---------- */
+  .flow{display:flex;flex-direction:column;gap:0;margin-top:6px}
+  .step{display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:start;position:relative;padding:0 0 22px}
+  .step:last-child{padding-bottom:0}
+  .step .num{
+    font-family:ui-monospace,Consolas,monospace;font-size:13px;font-weight:700;color:var(--surface);
+    background:var(--ink);width:30px;height:30px;border-radius:7px;display:grid;place-items:center;position:relative;z-index:1
+  }
+  .step.key .num{background:var(--accent)}
+  .step::before{content:"";position:absolute;left:14px;top:30px;bottom:0;width:2px;background:var(--line)}
+  .step:last-child::before{display:none}
+  .step .body h4{margin:2px 0 4px;font-size:16px;font-weight:700}
+  .step .body h4 code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(--surface-2);padding:1px 7px;border-radius:5px;color:var(--accent-ink);font-weight:600}
+  .step .body p{font-size:14.5px;color:var(--muted);margin:0;max-width:60ch}
+
+  /* ---------- engine cards ---------- */
+  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:6px}
+  @media(max-width:720px){.cards{grid-template-columns:1fr}}
+  .card{border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:22px;box-shadow:var(--shadow);position:relative}
+  .card .k{font-family:ui-monospace,Consolas,monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);font-weight:600}
+  .card h3{margin:10px 0 6px;font-size:19px;font-weight:800;letter-spacing:-.01em}
+  .card p{font-size:14px;color:var(--muted);margin:0 0 14px}
+  .card .use{font-size:12.5px;font-family:ui-monospace,Consolas,monospace;color:var(--ink);border-top:1px dashed var(--line);padding-top:12px}
+  .card .use span{color:var(--muted)}
+
+  /* ---------- code block ---------- */
+  .code{
+    background:var(--code-bg);border-radius:12px;padding:20px 22px;margin:18px 0 0;overflow-x:auto;
+    font-family:ui-monospace,"Cascadia Code",Consolas,monospace;font-size:13.5px;line-height:1.75;color:var(--code-ink);
+    box-shadow:var(--shadow);border:1px solid rgba(255,255,255,.04)
+  }
+  .code .c{color:var(--code-dim)}
+  .code .win{color:#ff9ea2}
+  .code .ok{color:#88d69b}
+  .code .star{color:#ffd166}
+  .code .dim{color:var(--code-dim)}
+  .code b{color:#fff;font-weight:600}
+
+  /* ---------- rules list ---------- */
+  .rules{list-style:none;padding:0;margin:14px 0 0;display:grid;gap:2px}
+  .rules li{display:grid;grid-template-columns:auto 1fr;gap:14px;padding:12px 0;border-top:1px solid var(--line);align-items:baseline}
+  .rules li:first-child{border-top:0}
+  .rules .n{font-family:ui-monospace,Consolas,monospace;font-size:12px;color:var(--accent);font-weight:700}
+  .rules .t{font-size:15px}
+  .rules .t b{font-weight:700}
+  .rules .t .mono{font-size:13px;background:var(--surface-2);padding:1px 6px;border-radius:4px}
+
+  /* ---------- roadmap ---------- */
+  .road{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:6px}
+  @media(max-width:620px){.road{grid-template-columns:1fr}}
+  .road .item{border:1px solid var(--line);border-radius:10px;padding:16px 18px;background:var(--surface)}
+  .road .item .h{font-weight:700;font-size:15px;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+  .road .item .h .dot{width:7px;height:7px;border-radius:50%;background:var(--accent)}
+  .road .item p{font-size:13.5px;color:var(--muted);margin:0}
+  .road .item.web{border-color:color-mix(in srgb,var(--accent) 40%,var(--line));background:var(--accent-soft)}
+  .road .item.web .h{color:var(--accent-ink)}
+  .road .item.web p{color:color-mix(in srgb,var(--accent-ink) 70%,var(--muted))}
+
+  /* ---------- footer ---------- */
+  footer{padding:40px 0 60px}
+  .foot{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;font-family:ui-monospace,Consolas,monospace;font-size:13px;color:var(--muted)}
+  .foot a{font-weight:600}
+
+  @media (prefers-reduced-motion:no-preference){
+    .reveal{opacity:0;transform:translateY(10px);animation:rise .6s ease forwards}
+    @keyframes rise{to{opacity:1;transform:none}}
+  }
+</style>
+
+<header>
+  <svg class="crosshair" viewBox="0 0 880 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <defs><pattern id="g" width="44" height="44" patternUnits="userSpaceOnUse">
+      <path d="M44 0H0V44" fill="none" stroke="currentColor" stroke-width="1" opacity=".08"/>
+    </pattern></defs>
+    <rect width="880" height="300" fill="url(#g)" color="var(--ink)"/>
+    <g color="var(--accent)" opacity=".9">
+      <rect x="612" y="86" width="150" height="52" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="5 5" rx="4"/>
+      <path d="M688 60v18M688 146v18M604 112h18M754 112h18" stroke="currentColor" stroke-width="2"/>
+    </g>
+  </svg>
+  <div class="wrap hd reveal">
+    <p class="eyebrow">QA Automation · Herramienta de inspección</p>
+    <h1>MoreWater&nbsp;<span class="spy">Object&nbsp;Spy</span></h1>
+    <p class="lede">Captura el objeto en el <span style="color:var(--ink);font-weight:600">instante del clic</span> —aunque la ventana cambie o se abra un modal— y genera locators listos para Winium, rankeados por estabilidad y unicidad.</p>
+    <div class="specline">
+      <span class="chip">.NET <b>8.0</b></span>
+      <span class="chip">C# · <b>WinForms</b></span>
+      <span class="chip"><b>UIA</b> + <b>MSAA</b> + <b>Win32</b></span>
+      <span class="chip">Delphi · WPF · WinForms · UWP</span>
+      <span class="chip">by <b>MazahuaAlan</b></span>
+    </div>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <p class="tag">El problema</p>
+    <h2>El objeto que desaparece antes de poder leerlo</h2>
+    <p>Inspect.exe, UISpy o Accessibility Insights <em>sí</em> encuentran los objetos. El problema aparece cuando la aplicación <span class="hl">cambia de ventana, superpone modales o roba el foco</span> — justo lo más común en apps de escritorio reales. El inspector pierde el objeto antes de que alcances a leer sus propiedades.</p>
+    <div class="split">
+      <div class="panel bad">
+        <h3>Inspector tradicional</h3>
+        <p>Clic → se abre un modal → la ventana anterior cambia → el objeto original ya no está disponible. Hay que repetir e ir con cuidado.</p>
+      </div>
+      <div class="panel good">
+        <h3>Object Spy</h3>
+        <p>Toma un <strong>snapshot inmutable</strong> en el instante exacto del clic, antes de que la app procese el evento. El objeto sobrevive aunque su ventana desaparezca.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="tag">Flujo de captura</p>
+    <h2>Congelar el objeto en el instante del clic</h2>
+    <p>La clave está en el orden: lo <strong>rápido y crítico</strong> ocurre síncrono dentro del hook; lo lento va después, en segundo plano.</p>
+    <div class="flow">
+      <div class="step"><div class="num">1</div><div class="body">
+        <h4>Hotkey <code>F8</code> instala el hook</h4>
+        <p>Un hook global de mouse (<span class="mono">WH_MOUSE_LL</span>) queda a la escucha de cada clic en el sistema.</p>
+      </div></div>
+      <div class="step key"><div class="num">2</div><div class="body">
+        <h4>Snapshot Win32 — <span class="mono" style="color:var(--accent-ink)">síncrono</span></h4>
+        <p>En el hilo del hook, en el instante del clic (la ventana aún existe): <span class="mono">WindowFromPoint</span> → HWND, clase, título, PID. Datos garantizados.</p>
+      </div></div>
+      <div class="step"><div class="num">3</div><div class="body">
+        <h4>UIA + MSAA — en segundo plano</h4>
+        <p>La consulta pesada corre fuera del hook para no bloquearlo: propiedades UI Automation, ancestros y, como respaldo Delphi, MSAA.</p>
+      </div></div>
+      <div class="step"><div class="num">4</div><div class="body">
+        <h4>Locators rankeados + resaltado</h4>
+        <p>Se generan los candidatos, se verifica unicidad y se resalta el elemento en pantalla. Todo se agrega al historial.</p>
+      </div></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="tag">Tres motores</p>
+    <h2>UI Automation, MSAA y Win32 en paralelo</h2>
+    <p>Cada motor cubre lo que el otro no ve. Juntos forman una red de seguridad, especialmente para controles Delphi que UIA a veces no expone bien.</p>
+    <div class="cards">
+      <div class="card">
+        <div class="k">Motor 01</div>
+        <h3>UI Automation</h3>
+        <p>Name, AutomationId, ControlType, FrameworkId, patterns y el árbol de la ventana.</p>
+        <div class="use"><span>cubre</span> WPF · WinForms · UWP · Win32</div>
+      </div>
+      <div class="card">
+        <div class="k">Motor 02</div>
+        <h3>MSAA</h3>
+        <p>Role, State, Name, Value y DefaultAction vía IAccessible. El respaldo cuando UIA falla.</p>
+        <div class="use"><span>cubre</span> Delphi / VCL · legacy</div>
+      </div>
+      <div class="card">
+        <div class="k">Motor 03</div>
+        <h3>Win32</h3>
+        <p>HWND, ClassName, título, proceso y rectángulo. El snapshot que nunca falla.</p>
+        <div class="use"><span>cubre</span> cualquier ventana nativa</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="tag">Inteligencia de locators</p>
+    <h2>No solo muestra propiedades: recomienda el selector correcto</h2>
+    <p>El generador produce varios candidatos y los ordena <span class="hl">primero por unicidad, luego por estabilidad</span>. Verifica en vivo cuántos elementos coinciden y, si hay varios iguales, entrega el <strong>índice determinístico</strong> sobre el atributo más selectivo.</p>
+
+    <div class="code" aria-label="Ejemplo de salida">
+<span class="c">// Objeto: Image · AutomationId="btnImage" (14 coincidencias) · ClassName="Image" (63)</span>
+
+<span class="star">★ #1</span> <span class="ok">[Alta] (única ✓)</span>  Índice determinístico sobre <b>AutomationId</b> <span class="dim">(#1 de 14)</span>
+     By.xpath(<b>"(//Image[@AutomationId='btnImage'])[1]"</b>)
+     <span class="dim">alt (API, 0-based): driver.findElements(By.id("btnImage")).get(0);</span>
+
+   <span class="dim">#4 [Baja] (63 coincidencias, #38)  By.className("Image")
+        ⚠ demasiadas coincidencias — usa el índice determinístico</span>
+    </div>
+
+    <ul class="rules">
+      <li><span class="n">R1</span><span class="t"><b>Nunca</b> el título de ventana como Name del control — en WPF sería el mismo para todos.</span></li>
+      <li><span class="n">R2</span><span class="t"><b>AutomationId numérico</b> → se degrada (autogenerado) y se prefiere <span class="mono">Name</span>.</span></li>
+      <li><span class="n">R3</span><span class="t"><b>Promoción</b> → si clicas el texto dentro de un botón, sube al control accionable.</span></li>
+      <li><span class="n">R4</span><span class="t"><b>Unicidad + índice</b> → se indexa sobre el atributo con <em>menos coincidencias</em> (AutomationId › Name › ClassName).</span></li>
+      <li><span class="n">R5</span><span class="t"><b>Dos formas</b> → XPath <span class="mono">[n]</span> (1-based) y <span class="mono">findElements().get(i)</span> (0-based).</span></li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="tag">Exploración</p>
+    <h2>Árbol de objetos y resaltado en pantalla</h2>
+    <p>Además de la captura por clic, un <strong>explorador jerárquico</strong> de la ventana con carga perezosa deja navegar toda la interfaz y elegir el control con precisión — sin depender del pixel exacto. Al seleccionar cualquier nodo, se <span class="hl">dibuja un rectángulo sobre el elemento real</span>, como Inspect.exe, mediante una ventana transparente que no roba el foco ni intercepta clics.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="tag">Hoja de ruta</p>
+    <h2>De inspector a plataforma de locators</h2>
+    <div class="road">
+      <div class="item"><div class="h"><span class="dot"></span>Grabador de acciones</div><p>Registrar clic → escribir → clic y generar el script Winium completo, no solo locators sueltos.</p></div>
+      <div class="item"><div class="h"><span class="dot"></span>Multi-framework</div><p>Exportar el mismo objeto a WinAppDriver, FlaUI y Appium (desktop / móvil).</p></div>
+      <div class="item web"><div class="h"><span class="dot"></span>Extensión a Web</div><p>Adaptador que inspeccione el DOM (Selenium / Playwright) reutilizando la misma lógica de ranking, unicidad e índice. Una sola herramienta para escritorio, móvil y web.</p></div>
+      <div class="item"><div class="h"><span class="dot"></span>Validación en vivo + CI</div><p>Probar el locator al vuelo, screenshots por captura e integración continua.</p></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap foot">
+    <span>MoreWater Object Spy · Documentación técnica</span>
+    <span>By <a href="https://github.com/MazahuaAlan/MoreWaterObjectSpy">MazahuaAlan</a></span>
+  </div>
+</footer>

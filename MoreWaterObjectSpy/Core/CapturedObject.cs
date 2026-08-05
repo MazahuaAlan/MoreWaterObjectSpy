@@ -91,6 +91,7 @@ public class LocatorCandidate
     public string Java { get; set; } = "";         // driver.findElement(...)...
     public string Stability { get; set; } = "";    // Alta / Media / Baja / Volatil
     public string? Warning { get; set; }
+    public string? Alt { get; set; }               // forma alternativa (p.ej. findElements(...).get(i))
 
     // Analisis de unicidad (A1). MatchCount 0 = no analizado.
     public int MatchCount { get; set; }
