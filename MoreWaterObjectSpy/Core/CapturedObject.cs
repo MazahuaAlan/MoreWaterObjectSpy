@@ -51,6 +51,16 @@ public class UIAutomationInfo
     public List<string> Patterns { get; set; } = new();
     public List<AncestorInfo> Ancestors { get; set; } = new();
 
+    // Bounding rectangle numerico (coordenadas de pantalla) para resaltar en pantalla
+    public int BoundX { get; set; }
+    public int BoundY { get; set; }
+    public int BoundW { get; set; }
+    public int BoundH { get; set; }
+
+    /// <summary>Referencia viva al AutomationElement (para analisis de unicidad). No se serializa.</summary>
+    [JsonIgnore]
+    public object? Element { get; set; }
+
     /// <summary>true si es un control sin ventana propia (WPF/UWP): NativeHandle == 0.</summary>
     public bool IsWindowless =>
         Available && (NativeWindowHandle == "0x00000000" || NativeWindowHandle == "0x0");
@@ -81,6 +91,11 @@ public class LocatorCandidate
     public string Java { get; set; } = "";         // driver.findElement(...)...
     public string Stability { get; set; } = "";    // Alta / Media / Baja / Volatil
     public string? Warning { get; set; }
+
+    // Analisis de unicidad (A1). MatchCount 0 = no analizado.
+    public int MatchCount { get; set; }
+    public int MatchIndex { get; set; }   // posicion 1-based del elemento capturado entre las coincidencias
+    public bool Unique { get; set; }
 }
 
 /// <summary>

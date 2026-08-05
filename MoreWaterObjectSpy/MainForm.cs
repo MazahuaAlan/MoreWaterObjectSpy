@@ -35,6 +35,9 @@ public class MainForm : Form
     private string _cdMsg = "";
     private Action? _cdAction;
 
+    // Resaltado en pantalla (A3)
+    private readonly HighlightOverlay _overlay = new();
+
     public MainForm()
     {
         BuildUi();
@@ -260,6 +263,7 @@ public class MainForm : Form
         NativeMethods.UnregisterHotKey(Handle, HOTKEY_TOGGLE);
         NativeMethods.UnregisterHotKey(Handle, HOTKEY_POINT);
         _timer.Dispose();
+        _overlay.Dispose();
         _service.Dispose();
         base.OnFormClosed(e);
     }
@@ -305,6 +309,14 @@ public class MainForm : Form
         _currentObj = obj;
         _txtProps.Text = FormatProps(obj);
         _txtLocator.Text = obj.RecommendedLocator;
+        Highlight(obj);
+    }
+
+    private void Highlight(CapturedObject o)
+    {
+        var u = o.UiAutomation;
+        if (u.Available && u.BoundW > 0 && u.BoundH > 0)
+            _overlay.Flash(u.BoundX, u.BoundY, u.BoundW, u.BoundH);
     }
 
     private void CopyCurrent(Func<CapturedObject, string> selector, string what)
@@ -390,6 +402,7 @@ public class MainForm : Form
             var obj = TreeService.ToCaptured(el, ++_treeIndex);
             _currentObj = obj;
             _txtTreeProps.Text = FormatProps(obj);
+            Highlight(obj);
         }
         catch (Exception ex)
         {
@@ -489,7 +502,10 @@ public class MainForm : Form
             foreach (var c in o.Candidates)
             {
                 var star = c.Rank == 1 ? "★ " : "  ";
-                sb.AppendLine($"{star}#{c.Rank} [{c.Stability}] {c.Strategy}");
+                var uniq = c.Unique ? "  (única ✓)"
+                         : c.MatchCount > 1 ? $"  ({c.MatchCount} coincidencias, #{c.MatchIndex})"
+                         : "";
+                sb.AppendLine($"{star}#{c.Rank} [{c.Stability}]{uniq} {c.Strategy}");
                 sb.AppendLine($"     {c.Locator}");
                 if (!string.IsNullOrWhiteSpace(c.Warning))
                     sb.AppendLine($"     ⚠ {c.Warning}");

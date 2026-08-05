@@ -1,21 +1,20 @@
+using System.Windows.Automation;
 using MoreWaterObjectSpy.Core;
 
 namespace MoreWaterObjectSpy.Services;
 
 /// <summary>
-/// Genera candidatos de locator rankeados por estabilidad, consciente de WPF vs Win32/Delphi.
+/// Genera candidatos de locator rankeados por estabilidad y UNICIDAD, consciente de WPF vs Win32/Delphi.
 ///
-/// Reglas duras aprendidas en campo:
-///  - NUNCA usar el WindowTitle de Win32 como Name del control: en WPF eso es el titulo de la
-///    ventana raiz (p.ej. "MainWindow") y produce un locator que apunta a toda la ventana.
+/// Reglas duras:
+///  - NUNCA usar el WindowTitle de Win32 como Name del control (en WPF es el titulo de la ventana raiz).
 ///  - En WPF el control no tiene HWND propio (NativeHandle=0) -> HWND/Win32 no sirven como locator.
-///  - Sin Name ni AutomationId, la mejor opcion es XPath por ClassName/ControlType, anclado al
-///    ancestro identificable para acotar. Advertir siempre que puede haber varios y hay que indexar.
-///  - PROMOCION: si capturas un elemento de puro contenido (Text/Image dentro de un Button) sin
-///    AutomationId ni pattern accionable, se sube al ancestro accionable (Button con Invoke y/o
-///    AutomationId) y se recomienda ESE locator: es lo que realmente quieres clicar en Winium.
+///  - AutomationId puramente NUMERICO -> normalmente autogenerado/inestable: se degrada y se prefiere Name.
+///  - PROMOCION: si capturas contenido (Text/Image) dentro de un Button, se sube al control accionable.
+///  - UNICIDAD (A1): se cuenta cuantos elementos matchean cada locator dentro de la ventana. Si hay varios
+///    iguales, se genera un XPath INDEXADO con el indice real del elemento capturado -> coincidencia unica.
 ///
-/// Prioridad: AutomationId > Name (exacto UIA) > XPath anclado > By.className > XPath simple > HWND.
+/// Ranking final: primero los UNICOS, luego por estabilidad (Alta > Media > Baja > Volatil).
 /// </summary>
 public static class LocatorGenerator
 {
@@ -26,7 +25,6 @@ public static class LocatorGenerator
         new(StringComparer.OrdinalIgnoreCase)
         { "Button", "MenuItem", "ListItem", "TabItem", "CheckBox", "RadioButton", "Hyperlink", "SplitButton" };
 
-    // Tipos que suelen ser "solo contenido" (el label/icono dentro de un control accionable)
     private static readonly HashSet<string> ContentTypes =
         new(StringComparer.OrdinalIgnoreCase) { "Text", "Image", "Separator" };
 
@@ -50,7 +48,6 @@ public static class LocatorGenerator
         }
     }
 
-    /// <summary>Objetivo del locator: puede ser el elemento capturado o un ancestro promovido.</summary>
     private sealed class Target
     {
         public string ControlType = "";
@@ -58,7 +55,12 @@ public static class LocatorGenerator
         public string AutomationId = "";
         public string ClassName = "";
         public List<string> Patterns = new();
-        public List<AncestorInfo> AnchorAncestors = new(); // ancestros para armar XPath anclado
+        public List<AncestorInfo> AnchorAncestors = new();
+    }
+
+    private sealed class Uniq
+    {
+        public UniquenessService.Match Name, Id, Cls;
     }
 
     private static List<LocatorCandidate> Build(CapturedObject obj)
@@ -66,8 +68,9 @@ public static class LocatorGenerator
         var list = new List<LocatorCandidate>();
         var u = obj.UiAutomation;
         var w = obj.Win32;
+        var el = u.Element as AutomationElement;
 
-        // --- Caso UIA no disponible: MSAA (Delphi) y luego Win32 real ---
+        // --- UIA no disponible: MSAA (Delphi) y luego Win32 real ---
         if (!u.Available)
         {
             var m = obj.Msaa;
@@ -86,17 +89,14 @@ public static class LocatorGenerator
                   || u.FrameworkId.Equals("XAML", StringComparison.OrdinalIgnoreCase)
                   || u.IsWindowless;
 
-        // --- Decidir el objetivo: elemento capturado o ancestro accionable (promocion) ---
+        // --- Objetivo: elemento capturado o ancestro accionable (promocion) ---
         string? promotedFrom = null;
         var target = new Target
         {
-            ControlType = u.ControlType,
-            Name = u.Name,
-            AutomationId = u.AutomationId,
-            ClassName = u.ClassName,
-            Patterns = u.Patterns,
-            AnchorAncestors = u.Ancestors
+            ControlType = u.ControlType, Name = u.Name, AutomationId = u.AutomationId,
+            ClassName = u.ClassName, Patterns = u.Patterns, AnchorAncestors = u.Ancestors
         };
+        var targetEl = el;
 
         if (IsContentLeaf(u))
         {
@@ -107,68 +107,115 @@ public static class LocatorGenerator
                 promotedFrom = $"{Blank(u.ControlType, "elemento")} '{u.Name}'";
                 target = new Target
                 {
-                    ControlType = a.ControlType,
-                    Name = a.Name,
-                    AutomationId = a.AutomationId,
-                    ClassName = a.ClassName,
-                    Patterns = a.Patterns,
+                    ControlType = a.ControlType, Name = a.Name, AutomationId = a.AutomationId,
+                    ClassName = a.ClassName, Patterns = a.Patterns,
                     AnchorAncestors = u.Ancestors.Skip(idx + 1).ToList()
                 };
+                targetEl = ClimbParents(el, idx + 1);
             }
         }
 
-        GenerateFor(list, target, promotedFrom, isWpf, w);
+        // --- A1: analisis de unicidad del objetivo dentro de la ventana ---
+        Uniq? uniq = null;
+        if (targetEl != null)
+        {
+            var root = UniquenessService.RootOf(targetEl);
+            if (root != null)
+            {
+                uniq = new Uniq();
+                if (!string.IsNullOrWhiteSpace(target.Name))
+                    uniq.Name = UniquenessService.ByProperty(root, targetEl, AutomationElement.NameProperty, target.Name);
+                if (!string.IsNullOrWhiteSpace(target.AutomationId))
+                    uniq.Id = UniquenessService.ByProperty(root, targetEl, AutomationElement.AutomationIdProperty, target.AutomationId);
+                if (!string.IsNullOrWhiteSpace(target.ClassName))
+                    uniq.Cls = UniquenessService.ByProperty(root, targetEl, AutomationElement.ClassNameProperty, target.ClassName);
+            }
+        }
 
-        // Si hubo promocion, dejar el texto/hijo como dato informativo (normalmente NO es el click)
+        GenerateFor(list, target, promotedFrom, isWpf, w, uniq);
+
         if (promotedFrom != null && !string.IsNullOrWhiteSpace(u.Name))
             Add(list, "Texto hijo (informativo — normalmente NO es lo que clicas)", "Baja",
                 "Es el label/icono dentro del control accionable de arriba", $"By.name(\"{Esc(u.Name)}\")");
 
-        Rank(list);
+        RankByQuality(list);
         return list;
     }
 
-    private static void GenerateFor(List<LocatorCandidate> list, Target t, string? promotedFrom, bool isWpf, Win32Info w)
+    private static void GenerateFor(List<LocatorCandidate> list, Target t, string? promotedFrom, bool isWpf, Win32Info w, Uniq? uniq)
     {
         string tag = promotedFrom != null ? $" (promovido desde {promotedFrom})" : "";
-        // Si el control expone Value pero NO Invoke, la accion natural es escribir, no clicar
         string action = t.Patterns.Any(p => p.Equals("Value", StringComparison.OrdinalIgnoreCase))
                         && !t.Patterns.Any(p => p.Equals("Invoke", StringComparison.OrdinalIgnoreCase))
                         ? "sendKeys(\"...\")" : "click()";
-
-        // 1) AutomationId (lo mas estable de todo)
-        if (!string.IsNullOrWhiteSpace(t.AutomationId))
-            Add(list, "AutomationId (el mas estable)" + tag, "Alta", null, $"By.id(\"{Esc(t.AutomationId)}\")", action);
-
-        // 2) Name exacto del control (UIA)
-        if (!string.IsNullOrWhiteSpace(t.Name))
-            Add(list, "Name (caption del control)" + tag, "Alta",
-                "Se rompe si cambia el texto/idioma", $"By.name(\"{Esc(t.Name)}\")", action);
-
-        // 3) XPath anclado al ancestro identificable
-        var anchor = FindAnchor(t.AnchorAncestors);
         var elTag = XTag(t.ControlType);
+
+        // 1) AutomationId — degradado si es puramente numerico (autogenerado)
+        if (!string.IsNullOrWhiteSpace(t.AutomationId))
+        {
+            bool numeric = IsNumeric(t.AutomationId);
+            var c = Add(list,
+                (numeric ? "AutomationId numerico (poco fiable)" : "AutomationId (el mas estable)") + tag,
+                numeric ? "Baja" : "Alta",
+                numeric ? "AutomationId numerico: probablemente autogenerado/inestable — prefiere Name" : null,
+                $"By.id(\"{Esc(t.AutomationId)}\")", action);
+            Annotate(c, uniq?.Id);
+        }
+
+        // 2) Name exacto del control
+        if (!string.IsNullOrWhiteSpace(t.Name))
+        {
+            var c = Add(list, "Name (caption del control)" + tag, "Alta",
+                "Se rompe si cambia el texto/idioma", $"By.name(\"{Esc(t.Name)}\")", action);
+            Annotate(c, uniq?.Name);
+            // Si el Name se repite, ofrecer XPath indexado por Name con el indice real
+            if (uniq != null && uniq.Name.Count > 1 && uniq.Name.Index > 0)
+            {
+                var xp = $"(//{elTag}[@Name='{Esc(t.Name)}'])[{uniq.Name.Index}]";
+                var ci = Add(list, "XPath indexado por Name (coincidencia unica)" + tag, "Alta",
+                    null, $"By.xpath(\"{Esc(xp)}\")", action);
+                ci.MatchCount = 1; ci.MatchIndex = uniq.Name.Index; ci.Unique = true;
+            }
+        }
+
+        // 3) XPath anclado al ancestro identificable (unicidad no verificada)
+        var anchor = FindAnchor(t.AnchorAncestors);
         if (anchor != null && !string.IsNullOrWhiteSpace(t.ClassName))
         {
             var ancTag = XTag(anchor.ControlType);
             var ancPred = !string.IsNullOrWhiteSpace(anchor.ClassName)
-                ? $"[@ClassName='{Esc(anchor.ClassName)}']"
-                : $"[@Name='{Esc(anchor.Name)}']";
+                ? $"[@ClassName='{Esc(anchor.ClassName)}']" : $"[@Name='{Esc(anchor.Name)}']";
             var xp = $"//{ancTag}{ancPred}//{elTag}[@ClassName='{Esc(t.ClassName)}']";
             Add(list, $"XPath anclado a '{anchor.ClassName}'" + tag, "Media",
                 "Si hay varios controles iguales dentro de la vista, indexar: (…)[1], (…)[2]",
                 $"By.xpath(\"{Esc(xp)}\")", action);
         }
 
-        // 4) By.className directo (mas limpio que XPath; misma selectividad)
+        // 4) By.className directo
         if (!string.IsNullOrWhiteSpace(t.ClassName))
-            Add(list, "By.className (alternativa simple)" + tag, "Baja",
-                "Devuelve el primero que coincida; si hay varios, usar el XPath anclado", $"By.className(\"{Esc(t.ClassName)}\")", action);
+        {
+            var c = Add(list, "By.className (alternativa simple)" + tag, "Baja",
+                "Devuelve el primero que coincida; si hay varios, usar el XPath indexado", $"By.className(\"{Esc(t.ClassName)}\")", action);
+            Annotate(c, uniq?.Cls);
+        }
 
-        // 5) XPath simple por ControlType + ClassName
+        // 5) XPath por ClassName — se vuelve INDEXADO y unico si hay varios de la misma clase
         if (!string.IsNullOrWhiteSpace(t.ClassName))
-            Add(list, "XPath por ClassName" + tag, "Baja",
-                "Probablemente devuelve varios; combinar con ancestro o indice", $"By.xpath(\"//{elTag}[@ClassName='{Esc(t.ClassName)}']\")", action);
+        {
+            if (uniq != null && uniq.Cls.Count > 1 && uniq.Cls.Index > 0)
+            {
+                var xp = $"(//{elTag}[@ClassName='{Esc(t.ClassName)}'])[{uniq.Cls.Index}]";
+                var c = Add(list, $"XPath indexado por ClassName (#{uniq.Cls.Index} de {uniq.Cls.Count}, unico)" + tag, "Alta",
+                    null, $"By.xpath(\"{Esc(xp)}\")", action);
+                c.MatchCount = 1; c.MatchIndex = uniq.Cls.Index; c.Unique = true;
+            }
+            else
+            {
+                var c = Add(list, "XPath por ClassName" + tag, "Baja",
+                    "Combinar con ancestro o indice si hay varios", $"By.xpath(\"//{elTag}[@ClassName='{Esc(t.ClassName)}']\")", action);
+                Annotate(c, uniq?.Cls);
+            }
+        }
 
         // 6) HWND: solo Win32 real (no WPF sin ventana) y si no es la ventana raiz
         if (!isWpf && w.Hwnd != "0x0" && w.Hwnd != w.RootHwnd)
@@ -176,9 +223,29 @@ public static class LocatorGenerator
                 "El handle cambia en cada ejecucion; no usar en scripts", $"// HWND: {w.Hwnd}", action);
     }
 
+    /// <summary>Anota conteo/indice de coincidencias y ajusta estabilidad/advertencia.</summary>
+    private static void Annotate(LocatorCandidate c, UniquenessService.Match? match)
+    {
+        if (match == null || match.Value.Count == 0) return;
+        c.MatchCount = match.Value.Count;
+        c.MatchIndex = match.Value.Index;
+        if (match.Value.Count == 1)
+        {
+            c.Unique = true;
+            if (c.Stability == "Baja") c.Stability = "Media";
+            if (c.Warning != null && c.Warning.Contains("coincid")) c.Warning = null;
+        }
+        else
+        {
+            c.Unique = false;
+            c.Warning = $"{match.Value.Count} coincidencias; este es #{match.Value.Index} — usa el XPath indexado";
+        }
+    }
+
     // --- Heuristicas ---
 
-    /// <summary>El elemento es "puro contenido" (label/icono), no un control accionable.</summary>
+    private static bool IsNumeric(string s) => s.Length > 0 && s.All(char.IsDigit);
+
     private static bool IsContentLeaf(UIAutomationInfo u)
     {
         bool leafType = ContentTypes.Contains(u.ControlType);
@@ -187,20 +254,31 @@ public static class LocatorGenerator
         return leafType && !hasActionPattern && !hasId;
     }
 
-    /// <summary>Indice del primer ancestro accionable dentro de maxDepth niveles; -1 si no hay.</summary>
     private static int FindActionableAncestor(List<AncestorInfo> ancestors, int maxDepth)
     {
         for (int i = 0; i < ancestors.Count && i < maxDepth; i++)
         {
             var a = ancestors[i];
-            bool byPattern = a.Patterns.Any(p => ActionPatterns.Contains(p));
-            bool byType = ActionableTypes.Contains(a.ControlType);
-            if (byPattern || byType) return i;
+            if (a.Patterns.Any(p => ActionPatterns.Contains(p)) || ActionableTypes.Contains(a.ControlType))
+                return i;
         }
         return -1;
     }
 
-    /// <summary>Ancestro mas cercano con identidad util (una "vista"/panel con ClassName o Name propio).</summary>
+    private static AutomationElement? ClimbParents(AutomationElement? el, int levels)
+    {
+        if (el == null) return null;
+        try
+        {
+            var walker = TreeWalker.ControlViewWalker;
+            var cur = el;
+            for (int i = 0; i < levels && cur != null; i++)
+                cur = walker.GetParent(cur);
+            return cur;
+        }
+        catch { return null; }
+    }
+
     private static AncestorInfo? FindAnchor(List<AncestorInfo> ancestors)
     {
         foreach (var a in ancestors)
@@ -215,27 +293,48 @@ public static class LocatorGenerator
         return null;
     }
 
-    /// <summary>ControlType -> tag XPath de WinAppDriver/Winium (Edit, Button, Window, Custom, Pane...).</summary>
     private static string XTag(string controlType) =>
         string.IsNullOrWhiteSpace(controlType) ? "*" : controlType;
 
     private static string Blank(string s, string fallback) => string.IsNullOrWhiteSpace(s) ? fallback : s;
 
-    private static void Add(List<LocatorCandidate> list, string strategy, string stability, string? warn, string locator, string action = "click()")
-        => list.Add(new LocatorCandidate
+    private static LocatorCandidate Add(List<LocatorCandidate> list, string strategy, string stability, string? warn, string locator, string action = "click()")
+    {
+        var c = new LocatorCandidate
         {
             Strategy = strategy,
             Stability = stability,
             Warning = warn,
             Locator = locator,
-            Java = locator.StartsWith("By.")
-                ? $"driver.findElement({locator}).{action};"
-                : locator   // comentario (p.ej. HWND): se deja tal cual
-        });
+            Java = locator.StartsWith("By.") ? $"driver.findElement({locator}).{action};" : locator
+        };
+        list.Add(c);
+        return c;
+    }
 
     private static void Rank(List<LocatorCandidate> list)
     {
         for (int i = 0; i < list.Count; i++) list[i].Rank = i + 1;
+    }
+
+    /// <summary>Ordena: primero UNICOS, luego por estabilidad; conserva orden de insercion en empates.</summary>
+    private static void RankByQuality(List<LocatorCandidate> list)
+    {
+        int UniqScore(LocatorCandidate c) => c.Unique ? 2 : (c.MatchCount > 1 ? 0 : 1);
+        int StabScore(LocatorCandidate c) => c.Stability switch
+        {
+            "Alta" => 3, "Media" => 2, "Baja" => 1, _ => 0
+        };
+        var ordered = list
+            .Select((c, i) => (c, i))
+            .OrderByDescending(t => UniqScore(t.c))
+            .ThenByDescending(t => StabScore(t.c))
+            .ThenBy(t => t.i)
+            .Select(t => t.c)
+            .ToList();
+        list.Clear();
+        list.AddRange(ordered);
+        Rank(list);
     }
 
     private static string Esc(string s) => s.Replace("\\", "\\\\").Replace("\"", "\\\"");

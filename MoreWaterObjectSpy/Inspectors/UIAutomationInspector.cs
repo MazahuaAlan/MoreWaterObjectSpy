@@ -52,6 +52,7 @@ public static class UIAutomationInspector
         {
             var c = el.Current;
             info.Available = true;
+            info.Element = el; // para analisis de unicidad y resaltado
             info.Name = c.Name ?? "";
             info.AutomationId = c.AutomationId ?? "";
             info.ClassName = c.ClassName ?? "";
@@ -59,7 +60,12 @@ public static class UIAutomationInspector
             info.ControlType = c.ControlType?.ProgrammaticName?.Replace("ControlType.", "") ?? "";
 
             var r = c.BoundingRectangle;
-            info.BoundingRectangle = r.IsEmpty ? "" : $"{(int)r.X},{(int)r.Y} {(int)r.Width}x{(int)r.Height}";
+            if (!r.IsEmpty)
+            {
+                info.BoundingRectangle = $"{(int)r.X},{(int)r.Y} {(int)r.Width}x{(int)r.Height}";
+                info.BoundX = (int)r.X; info.BoundY = (int)r.Y;
+                info.BoundW = (int)r.Width; info.BoundH = (int)r.Height;
+            }
 
             try { info.RuntimeId = string.Join(".", el.GetRuntimeId()); } catch { }
             info.IsEnabled = c.IsEnabled;
