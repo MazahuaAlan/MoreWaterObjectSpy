@@ -54,8 +54,8 @@
           </Border>
 
           <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-            <ToggleButton x:Name="BtnPin" Style="{StaticResource WinBtn}" Content="&#xE718;"
-                          IsChecked="True" Click="BtnPin_Click" ToolTip="Siempre visible"/>
+            <Button x:Name="BtnPin" Style="{StaticResource WinBtn}" Content="&#xE718;"
+                    Foreground="{StaticResource AccentRed}" Click="BtnPin_Click" ToolTip="Siempre visible"/>
             <Button x:Name="BtnMin" Style="{StaticResource WinBtn}" Content="&#xE921;" Click="BtnMin_Click"/>
             <Button x:Name="BtnClose" Style="{StaticResource WinBtn}" Content="&#xE8BB;" Click="BtnClose_Click"/>
           </StackPanel>

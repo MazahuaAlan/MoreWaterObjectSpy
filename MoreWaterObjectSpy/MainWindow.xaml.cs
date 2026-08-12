@@ -23,6 +23,7 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer _cd = new() { Interval = TimeSpan.FromSeconds(1) };
 
     private CapturedObject? _current;
+    private bool _pinned = true;
     private int _cdLeft;
     private string _cdMsg = "";
     private Action? _cdAction;
@@ -93,7 +94,13 @@ public partial class MainWindow : Window
         if (e.ChangedButton == MouseButton.Left) { try { DragMove(); } catch { } }
     }
 
-    private void BtnPin_Click(object sender, RoutedEventArgs e) => Topmost = BtnPin.IsChecked == true;
+    private void BtnPin_Click(object sender, RoutedEventArgs e)
+    {
+        _pinned = !_pinned;
+        Topmost = _pinned;
+        BtnPin.Content = _pinned ? "" : "";  // pin / unpin
+        BtnPin.Foreground = _pinned ? (Brush)FindResource("AccentRed") : (Brush)FindResource("TextMuted");
+    }
     private void BtnMin_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
     private void BtnClose_Click(object sender, RoutedEventArgs e) => Close();
 
