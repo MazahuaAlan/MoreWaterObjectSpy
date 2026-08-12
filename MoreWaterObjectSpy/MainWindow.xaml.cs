@@ -2,18 +2,17 @@ using System.Text;
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
-using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
+using Wpf.Ui.Appearance;
 using MoreWaterObjectSpy.Core;
 using MoreWaterObjectSpy.Infrastructure;
 using MoreWaterObjectSpy.Services;
 
 namespace MoreWaterObjectSpy;
 
-public partial class MainWindow : Window
+public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 {
     private const int HOTKEY_TOGGLE = 1; // F8
     private const int HOTKEY_POINT = 2;  // F9
@@ -23,7 +22,7 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer _cd = new() { Interval = TimeSpan.FromSeconds(1) };
 
     private CapturedObject? _current;
-    private bool _pinned = true;
+    private bool _dark;
     private int _cdLeft;
     private string _cdMsg = "";
     private Action? _cdAction;
@@ -45,7 +44,7 @@ public partial class MainWindow : Window
             "   (aunque la ventana cambie o se abra un modal, el snapshot ya quedo tomado)\r\n" +
             "3. Aqui veras propiedades (UIA / MSAA / Win32) y los locators para Winium.\r\n" +
             "4. 'Capturar en 3s' o F9: captura sin click (menus/hovers que se cierran).\r\n" +
-            "5. Icono de arbol (izquierda): explora toda la ventana como jerarquia.\r\n";
+            "5. 'Árbol de elementos' (izquierda): explora toda la ventana como jerarquia.\r\n";
     }
 
     // ---------------- Hotkeys / ciclo de vida ----------------
@@ -57,8 +56,7 @@ public partial class MainWindow : Window
         HwndSource.FromHwnd(_hwnd)?.AddHook(WndProc);
         bool f8 = NativeMethods.RegisterHotKey(_hwnd, HOTKEY_TOGGLE, 0, NativeMethods.VK_F8);
         bool f9 = NativeMethods.RegisterHotKey(_hwnd, HOTKEY_POINT, 0, NativeMethods.VK_F9);
-        if (!f8 || !f9)
-            LblEstado.Text = "⚠ No se pudieron registrar F8/F9 globales (¿otra app los usa?). Usa los botones.";
+        if (!f8 || !f9) Status("⚠ No se pudieron registrar F8/F9 globales (¿otra app los usa?). Usa los botones.");
     }
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
@@ -87,30 +85,43 @@ public partial class MainWindow : Window
         base.OnClosed(e);
     }
 
-    // ---------------- Chrome de ventana ----------------
+    // ---------------- Estado / tema / navegacion ----------------
 
-    private void TitleBar_MouseDown(object sender, MouseButtonEventArgs e)
+    private void Status(string msg)
     {
-        if (e.ChangedButton == MouseButton.Left) { try { DragMove(); } catch { } }
+        bool cap = _service.IsCapturing;
+        EstadoBar.Title = cap ? "Capturando" : "Detenido";
+        EstadoBar.Message = msg;
+        LblEstadoMini.Text = cap ? "Capturando" : "Detenido";
+        StatusDot.Fill = (Brush)FindResource(cap ? "AccentBlue" : "AccentRed");
     }
 
-    private void BtnPin_Click(object sender, RoutedEventArgs e)
+    private void ThemeSwitch_Click(object sender, RoutedEventArgs e)
     {
-        _pinned = !_pinned;
-        Topmost = _pinned;
-        BtnPin.Content = _pinned ? "" : "";  // pin / unpin
-        BtnPin.Foreground = _pinned ? (Brush)FindResource("AccentRed") : (Brush)FindResource("TextMuted");
+        _dark = (sender as Wpf.Ui.Controls.ToggleSwitch)?.IsChecked == true;
+        ApplicationThemeManager.Apply(_dark ? ApplicationTheme.Dark : ApplicationTheme.Light);
+        ThemeSwitch.IsChecked = _dark;
+        ThemeSwitch2.IsChecked = _dark;
     }
-    private void BtnMin_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
-    private void BtnClose_Click(object sender, RoutedEventArgs e) => Close();
 
     private void Nav_Click(object sender, RoutedEventArgs e)
     {
-        bool captura = sender == NavCaptura;
-        NavCaptura.IsChecked = captura;
-        NavArbol.IsChecked = !captura;
-        CapturePanel.Visibility = captura ? Visibility.Visible : Visibility.Collapsed;
-        TreePanel.Visibility = captura ? Visibility.Collapsed : Visibility.Visible;
+        if (sender == NavExport)
+        {
+            NavExport.IsChecked = false; NavCapturas.IsChecked = true;
+            ShowView("cap"); DoExport(); return;
+        }
+        ShowView(sender == NavArbol ? "arbol"
+               : sender == NavConfig ? "config"
+               : sender == NavAcerca ? "about" : "cap");
+    }
+
+    private void ShowView(string v)
+    {
+        CapturePanel.Visibility = v == "cap" ? Visibility.Visible : Visibility.Collapsed;
+        TreePanel.Visibility = v == "arbol" ? Visibility.Visible : Visibility.Collapsed;
+        ConfigPanel.Visibility = v == "config" ? Visibility.Visible : Visibility.Collapsed;
+        AboutPanel.Visibility = v == "about" ? Visibility.Visible : Visibility.Collapsed;
     }
 
     // ---------------- Cuenta regresiva ----------------
@@ -119,16 +130,16 @@ public partial class MainWindow : Window
     {
         _cd.Stop();
         _cdLeft = secs; _cdMsg = msg; _cdAction = action;
-        LblEstado.Text = $"⏳ {msg} — {secs}s...";
+        Status($"⏳ {msg} — {secs}s...");
         _cd.Start();
     }
 
     private void OnCountdownTick(object? sender, EventArgs e)
     {
         _cdLeft--;
-        if (_cdLeft > 0) { LblEstado.Text = $"⏳ {_cdMsg} — {_cdLeft}s..."; return; }
+        if (_cdLeft > 0) { Status($"⏳ {_cdMsg} — {_cdLeft}s..."); return; }
         _cd.Stop();
-        LblEstado.Text = "🎯 Capturando...";
+        Status("🎯 Capturando...");
         var a = _cdAction; _cdAction = null; a?.Invoke();
     }
 
@@ -141,16 +152,16 @@ public partial class MainWindow : Window
         if (_service.IsCapturing)
         {
             _service.Stop();
-            BtnToggle.Content = "▶  Iniciar captura (F8)";
-            LblEstado.Text = "🔴 Detenido — F8 para reanudar";
+            BtnToggle.Content = "Iniciar captura (F8)";
+            Status("Detenido — F8 para reanudar");
         }
         else
         {
             try
             {
                 _service.Start();
-                BtnToggle.Content = "⏸  Detener captura (F8)";
-                LblEstado.Text = "🟢 CAPTURANDO — haz click en la app (F9 / 'Capturar en 3s' = sin click)";
+                BtnToggle.Content = "Detener captura (F8)";
+                Status("Haz click en la app objetivo (F9 / 'Capturar en 3s' = sin click)");
             }
             catch (Exception ex)
             {
@@ -166,7 +177,7 @@ public partial class MainWindow : Window
     private void OnCaptured(CapturedObject obj)
     {
         LstHistorial.Items.Add(obj);
-        LstHistorial.SelectedItem = obj; // dispara Hist_SelectionChanged
+        LstHistorial.SelectedItem = obj;
         LstHistorial.ScrollIntoView(obj);
     }
 
@@ -194,14 +205,14 @@ public partial class MainWindow : Window
 
     private void Copy(Func<CapturedObject, string> sel, string what)
     {
-        if (_current == null) { LblEstado.Text = "⚠ No hay objeto seleccionado"; return; }
+        if (_current == null) { Status("⚠ No hay objeto seleccionado"); return; }
         var text = sel(_current);
-        if (string.IsNullOrWhiteSpace(text)) { LblEstado.Text = $"⚠ El objeto no tiene {what}"; return; }
+        if (string.IsNullOrWhiteSpace(text)) { Status($"⚠ El objeto no tiene {what}"); return; }
         try { Clipboard.SetText(text); } catch { }
-        LblEstado.Text = $"📋 Copiado ({what}): " + (text.Length > 70 ? text[..70] + "..." : text);
+        Status($"📋 Copiado ({what}): " + (text.Length > 60 ? text[..60] + "..." : text));
     }
 
-    private void Export_Click(object sender, RoutedEventArgs e)
+    private void DoExport()
     {
         if (_service.History.Count == 0)
         {
@@ -210,7 +221,7 @@ public partial class MainWindow : Window
             return;
         }
         var path = _service.ExportJson();
-        LblEstado.Text = "💾 JSON exportado: " + path;
+        Status("💾 JSON exportado: " + path);
     }
 
     private void Clear_Click(object sender, RoutedEventArgs e)
@@ -220,7 +231,7 @@ public partial class MainWindow : Window
         TxtProps.Clear();
         TxtLocator.Clear();
         _current = null;
-        LblEstado.Text = _service.IsCapturing ? "🟢 CAPTURANDO — historial limpio" : "🔴 Detenido — historial limpio";
+        Status("Historial limpio");
     }
 
     // ---------------- Arbol ----------------
@@ -232,19 +243,19 @@ public partial class MainWindow : Window
     {
         NativeMethods.GetCursorPos(out var p);
         var root = TreeService.RootWindowFromPoint(p.X, p.Y);
-        if (root == null) { LblEstado.Text = "⚠ No se pudo obtener la ventana bajo el cursor"; return; }
+        if (root == null) { Status("⚠ No se pudo obtener la ventana bajo el cursor"); return; }
         Tree.Items.Clear();
         var node = MakeNode(root);
         Tree.Items.Add(node);
         node.IsExpanded = true;
-        LblEstado.Text = $"🌳 Árbol cargado: {node.Header} — expande y selecciona para ver locators";
+        Status($"🌳 Árbol cargado: {node.Header}");
     }
 
     private TreeViewItem MakeNode(AutomationElement el)
     {
         var n = new TreeViewItem { Header = TreeService.Label(el), Tag = el };
         if (TreeService.HasChildren(el))
-            n.Items.Add(new TreeViewItem { Header = "(cargando…)", Tag = null }); // placeholder
+            n.Items.Add(new TreeViewItem { Header = "(cargando…)", Tag = null });
         return n;
     }
 
@@ -258,7 +269,7 @@ public partial class MainWindow : Window
                 foreach (var ch in TreeService.Children(el))
                     item.Items.Add(MakeNode(ch));
             if (item.Items.Count == 0)
-                item.Items.Add(new TreeViewItem { Header = "(sin hijos)", Foreground = (Brush)FindResource("TextMuted") });
+                item.Items.Add(new TreeViewItem { Header = "(sin hijos)", Foreground = (Brush)FindResource("TextFillColorSecondaryBrush") });
         }
     }
 
