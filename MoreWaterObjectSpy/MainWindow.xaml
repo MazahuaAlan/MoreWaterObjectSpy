@@ -66,6 +66,8 @@
                          Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
               <ui:ToggleSwitch x:Name="ThemeSwitch" Content="Tema oscuro" Margin="0,10,0,0"
                                Click="ThemeSwitch_Click"/>
+              <ui:ToggleSwitch x:Name="PinSwitch" Content="Siempre encima" IsChecked="True"
+                               Margin="0,6,0,0" Click="Pin_Click"/>
             </StackPanel>
           </Border>
 
@@ -119,12 +121,24 @@
 
           <WrapPanel Grid.Row="1" Margin="0,12,0,12">
             <ui:Button x:Name="BtnToggle" Appearance="Primary" Margin="0,0,8,8"
-                       Content="Iniciar captura (F8)" Click="Toggle_Click"/>
-            <ui:Button Margin="0,0,8,8" Content="Capturar en 3s" Click="Capture3s_Click"/>
-            <ui:Button Margin="0,0,8,8" Content="Copiar locator" Click="CopyLoc_Click"/>
-            <ui:Button Margin="0,0,8,8" Content="Copiar Java" Click="CopyJava_Click"/>
-            <ui:Button Margin="0,0,8,8" Content="Copiar todo" Click="CopyAll_Click"/>
-            <ui:Button Margin="0,0,8,8" Content="Limpiar" Click="Clear_Click"/>
+                       Content="Iniciar captura (F8)" Click="Toggle_Click">
+              <ui:Button.Icon><ui:SymbolIcon Symbol="Play24"/></ui:Button.Icon>
+            </ui:Button>
+            <ui:Button Margin="0,0,8,8" Content="Capturar en 3s" Click="Capture3s_Click">
+              <ui:Button.Icon><ui:SymbolIcon Symbol="Timer24"/></ui:Button.Icon>
+            </ui:Button>
+            <ui:Button Margin="0,0,8,8" Content="Copiar locator" Click="CopyLoc_Click">
+              <ui:Button.Icon><ui:SymbolIcon Symbol="Copy24"/></ui:Button.Icon>
+            </ui:Button>
+            <ui:Button Margin="0,0,8,8" Content="Copiar Java" Click="CopyJava_Click">
+              <ui:Button.Icon><ui:SymbolIcon Symbol="Copy24"/></ui:Button.Icon>
+            </ui:Button>
+            <ui:Button Margin="0,0,8,8" Content="Copiar todo" Click="CopyAll_Click">
+              <ui:Button.Icon><ui:SymbolIcon Symbol="Copy24"/></ui:Button.Icon>
+            </ui:Button>
+            <ui:Button Margin="0,0,8,8" Content="Limpiar" Click="Clear_Click">
+              <ui:Button.Icon><ui:SymbolIcon Symbol="Delete24"/></ui:Button.Icon>
+            </ui:Button>
           </WrapPanel>
 
           <Grid Grid.Row="2">
@@ -183,7 +197,9 @@
             <RowDefinition Height="*"/>
           </Grid.RowDefinitions>
           <ui:Button Grid.Row="0" HorizontalAlignment="Left" Margin="0,4,0,12"
-                     Content="Cargar árbol (ventana bajo cursor, 3s)" Click="LoadTree_Click"/>
+                     Content="Cargar árbol (ventana bajo cursor, 3s)" Click="LoadTree_Click">
+            <ui:Button.Icon><ui:SymbolIcon Symbol="TextBulletListTree24"/></ui:Button.Icon>
+          </ui:Button>
           <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
               <ColumnDefinition Width="400"/>

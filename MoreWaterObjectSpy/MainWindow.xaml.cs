@@ -101,6 +101,9 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     private void ThemeSwitch_Click(object sender, RoutedEventArgs e)
         => ApplyTheme((sender as Wpf.Ui.Controls.ToggleSwitch)?.IsChecked == true);
 
+    private void Pin_Click(object sender, RoutedEventArgs e)
+        => Topmost = (sender as Wpf.Ui.Controls.ToggleSwitch)?.IsChecked == true;
+
     /// <summary>Claro = Fluent/Win11. Oscuro = paleta Docks (fondo azul + acento rojo).</summary>
     private void ApplyTheme(bool dark)
     {
@@ -111,9 +114,20 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         string[] keys = {
             "ApplicationBackgroundBrush", "LayerFillColorDefaultBrush",
             "CardBackgroundFillColorDefaultBrush", "CardBackgroundFillColorSecondaryBrush",
-            "TextFillColorPrimaryBrush", "TextFillColorSecondaryBrush", "SubtleFillColorSecondaryBrush"
+            "TextFillColorPrimaryBrush", "TextFillColorSecondaryBrush", "SubtleFillColorSecondaryBrush",
+            "AccentFillColorDefaultBrush", "AccentFillColorSecondaryBrush",
+            "AccentFillColorTertiaryBrush", "SystemAccentColorPrimaryBrush"
         };
         foreach (var k in keys) res.Remove(k); // limpiar overrides previos
+
+        // Acento: AZUL en claro, ROJO (Docks) en oscuro. Se sobreescriben directamente los brushes
+        // que usa el boton Primary de WPF-UI (el AccentColorManager no los regenera en caliente).
+        var (aDef, aHov, aPre) = dark ? ("#EF4B4C", "#E23E3F", "#C9383A")
+                                      : ("#3D619B", "#35578C", "#2E4C7B");
+        res["AccentFillColorDefaultBrush"] = Br(aDef);
+        res["AccentFillColorSecondaryBrush"] = Br(aHov);
+        res["AccentFillColorTertiaryBrush"] = Br(aPre);
+        res["SystemAccentColorPrimaryBrush"] = Br(aDef);
 
         if (dark)
         {
@@ -125,12 +139,10 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             res["TextFillColorPrimaryBrush"] = Br("#E9E9EB");
             res["TextFillColorSecondaryBrush"] = Br("#93A1B6");
             res["SubtleFillColorSecondaryBrush"] = Br("#33445C");
-            ApplicationAccentColorManager.Apply(C("#EF4B4C"), ApplicationTheme.Dark);
             Background = Br("#2B3A4E");
         }
         else
         {
-            ApplicationAccentColorManager.Apply(C("#3D619B"), ApplicationTheme.Light);
             Background = (Brush)FindResource("ApplicationBackgroundBrush");
         }
 
