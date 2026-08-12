@@ -14,7 +14,7 @@
     </Grid.RowDefinitions>
 
     <!-- Barra de titulo Fluent -->
-    <ui:TitleBar Grid.Row="0" Title="MoreWater Object Spy">
+    <ui:TitleBar Grid.Row="0" Title="MoreWater Object Spy v0.4.1">
       <ui:TitleBar.Icon>
         <ui:SymbolIcon Symbol="Search24"/>
       </ui:TitleBar.Icon>
@@ -45,6 +45,15 @@
             </StackPanel>
           </StackPanel>
 
+          <!-- Boton Guardar / Exportar JSON (como la version anterior) -->
+          <ui:Button DockPanel.Dock="Bottom" Margin="14,0,14,10" HorizontalAlignment="Stretch"
+                     Click="Export_Click" ToolTip="Exportar historial a JSON">
+            <StackPanel Orientation="Horizontal">
+              <ui:SymbolIcon Symbol="Save24" FontSize="16"/>
+              <TextBlock Text="Exportar JSON" Margin="8,0,0,0"/>
+            </StackPanel>
+          </ui:Button>
+
           <!-- Estado (abajo) -->
           <Border DockPanel.Dock="Bottom" Margin="14,8,14,14" Padding="12,10"
                   CornerRadius="10" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}">
@@ -73,12 +82,6 @@
               <StackPanel Orientation="Horizontal">
                 <ui:SymbolIcon Symbol="TextBulletListTree24" FontSize="16"/>
                 <TextBlock Text="Árbol de elementos" Margin="12,0,0,0" VerticalAlignment="Center"/>
-              </StackPanel>
-            </RadioButton>
-            <RadioButton x:Name="NavExport" Style="{StaticResource NavItem}" GroupName="nav" Click="Nav_Click">
-              <StackPanel Orientation="Horizontal">
-                <ui:SymbolIcon Symbol="ArrowExportLtr24" FontSize="16"/>
-                <TextBlock Text="Exportar JSON" Margin="12,0,0,0" VerticalAlignment="Center"/>
               </StackPanel>
             </RadioButton>
             <RadioButton x:Name="NavConfig" Style="{StaticResource NavItem}" GroupName="nav" Click="Nav_Click">
@@ -138,6 +141,7 @@
                            FontWeight="SemiBold" Margin="8,6,0,6"
                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                 <ListBox x:Name="LstHistorial" Background="Transparent" BorderThickness="0"
+                         Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                          FontFamily="{StaticResource Mono}" FontSize="12"
                          SelectionChanged="Hist_SelectionChanged"/>
               </DockPanel>
@@ -164,6 +168,7 @@
                              Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                   <TextBox x:Name="TxtLocator" IsReadOnly="True" Background="Transparent"
                            BorderThickness="0" FontFamily="{StaticResource Mono}"
+                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                            FontSize="14" FontWeight="SemiBold" Margin="0,4,0,0"/>
                 </StackPanel>
               </Border>
@@ -188,6 +193,7 @@
             <Border Grid.Column="0" CornerRadius="12" Padding="6"
                     Background="{DynamicResource CardBackgroundFillColorDefaultBrush}">
               <TreeView x:Name="Tree" Background="Transparent" BorderThickness="0"
+                        Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                         FontFamily="{StaticResource Mono}" FontSize="12"
                         SelectedItemChanged="Tree_SelectedItemChanged"/>
             </Border>

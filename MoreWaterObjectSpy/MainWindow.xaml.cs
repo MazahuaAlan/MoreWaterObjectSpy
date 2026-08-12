@@ -45,6 +45,8 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             "3. Aqui veras propiedades (UIA / MSAA / Win32) y los locators para Winium.\r\n" +
             "4. 'Capturar en 3s' o F9: captura sin click (menus/hovers que se cierran).\r\n" +
             "5. 'Árbol de elementos' (izquierda): explora toda la ventana como jerarquia.\r\n";
+
+        ApplyTheme(false); // Claro (Fluent) por defecto; acento azul
     }
 
     // ---------------- Hotkeys / ciclo de vida ----------------
@@ -97,24 +99,55 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     }
 
     private void ThemeSwitch_Click(object sender, RoutedEventArgs e)
+        => ApplyTheme((sender as Wpf.Ui.Controls.ToggleSwitch)?.IsChecked == true);
+
+    /// <summary>Claro = Fluent/Win11. Oscuro = paleta Docks (fondo azul + acento rojo).</summary>
+    private void ApplyTheme(bool dark)
     {
-        _dark = (sender as Wpf.Ui.Controls.ToggleSwitch)?.IsChecked == true;
-        ApplicationThemeManager.Apply(_dark ? ApplicationTheme.Dark : ApplicationTheme.Light);
-        ThemeSwitch.IsChecked = _dark;
-        ThemeSwitch2.IsChecked = _dark;
+        _dark = dark;
+        ApplicationThemeManager.Apply(dark ? ApplicationTheme.Dark : ApplicationTheme.Light);
+
+        var res = Application.Current.Resources;
+        string[] keys = {
+            "ApplicationBackgroundBrush", "LayerFillColorDefaultBrush",
+            "CardBackgroundFillColorDefaultBrush", "CardBackgroundFillColorSecondaryBrush",
+            "TextFillColorPrimaryBrush", "TextFillColorSecondaryBrush", "SubtleFillColorSecondaryBrush"
+        };
+        foreach (var k in keys) res.Remove(k); // limpiar overrides previos
+
+        if (dark)
+        {
+            // Sobreescribe el oscuro de WPF-UI con la paleta Docks
+            res["ApplicationBackgroundBrush"] = Br("#2B3A4E");
+            res["LayerFillColorDefaultBrush"] = Br("#243141");
+            res["CardBackgroundFillColorDefaultBrush"] = Br("#313F55");
+            res["CardBackgroundFillColorSecondaryBrush"] = Br("#3E4E68");
+            res["TextFillColorPrimaryBrush"] = Br("#E9E9EB");
+            res["TextFillColorSecondaryBrush"] = Br("#93A1B6");
+            res["SubtleFillColorSecondaryBrush"] = Br("#33445C");
+            ApplicationAccentColorManager.Apply(C("#EF4B4C"), ApplicationTheme.Dark);
+            Background = Br("#2B3A4E");
+        }
+        else
+        {
+            ApplicationAccentColorManager.Apply(C("#3D619B"), ApplicationTheme.Light);
+            Background = (Brush)FindResource("ApplicationBackgroundBrush");
+        }
+
+        if (ThemeSwitch != null) ThemeSwitch.IsChecked = dark;
+        if (ThemeSwitch2 != null) ThemeSwitch2.IsChecked = dark;
+        if (StatusDot != null) StatusDot.Fill = (Brush)FindResource(_service.IsCapturing ? "AccentBlue" : "AccentRed");
     }
 
+    private static Color C(string hex) => (Color)ColorConverter.ConvertFromString(hex);
+    private static SolidColorBrush Br(string hex) => new(C(hex));
+
     private void Nav_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender == NavExport)
-        {
-            NavExport.IsChecked = false; NavCapturas.IsChecked = true;
-            ShowView("cap"); DoExport(); return;
-        }
-        ShowView(sender == NavArbol ? "arbol"
-               : sender == NavConfig ? "config"
-               : sender == NavAcerca ? "about" : "cap");
-    }
+        => ShowView(sender == NavArbol ? "arbol"
+                  : sender == NavConfig ? "config"
+                  : sender == NavAcerca ? "about" : "cap");
+
+    private void Export_Click(object sender, RoutedEventArgs e) => DoExport();
 
     private void ShowView(string v)
     {
