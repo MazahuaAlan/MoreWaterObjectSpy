@@ -52,7 +52,7 @@ public class MainForm : Form
 
     private void BuildUi()
     {
-        Text = "MoreWater Object Spy v0.3 — Winium locators (by MazahuaAlan)";
+        Text = "MoreWater Object Spy v0.4.1 — Winium locators (by MazahuaAlan)";
         StartPosition = FormStartPosition.Manual;
         Location = new Point(40, 40);
         Size = new Size(1040, 680);
