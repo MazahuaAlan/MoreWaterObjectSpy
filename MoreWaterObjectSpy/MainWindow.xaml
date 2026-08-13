@@ -14,7 +14,7 @@
     </Grid.RowDefinitions>
 
     <!-- Barra de titulo Fluent -->
-    <ui:TitleBar Grid.Row="0" Title="MoreWater Object Spy v0.5.1">
+    <ui:TitleBar Grid.Row="0" Title="MoreWater Object Spy v0.5.2">
       <ui:TitleBar.Icon>
         <ui:SymbolIcon Symbol="Search24"/>
       </ui:TitleBar.Icon>
@@ -212,10 +212,13 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
           </Grid.RowDefinitions>
-          <ui:Button Grid.Row="0" HorizontalAlignment="Left" Margin="0,4,0,12"
-                     Content="Cargar árbol (ventana bajo cursor, 3s)" Click="LoadTree_Click">
-            <ui:Button.Icon><ui:SymbolIcon Symbol="TextBulletListTree24"/></ui:Button.Icon>
-          </ui:Button>
+          <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,4,0,12">
+            <ui:Button Content="Cargar árbol (ventana bajo cursor, 3s)" Click="LoadTree_Click">
+              <ui:Button.Icon><ui:SymbolIcon Symbol="TextBulletListTree24"/></ui:Button.Icon>
+            </ui:Button>
+            <ui:ToggleSwitch x:Name="RawSwitch" Content="Vista Raw (árbol completo)"
+                             Margin="18,0,0,0" VerticalAlignment="Center" Click="RawSwitch_Click"/>
+          </StackPanel>
           <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
               <ColumnDefinition Width="400"/>
@@ -253,7 +256,7 @@
                        Content="Grabar" Click="Record_Click">
               <ui:Button.Icon><ui:SymbolIcon Symbol="Record24"/></ui:Button.Icon>
             </ui:Button>
-            <ui:Button Margin="0,0,8,8" Content="Generar script" Click="GenScript_Click">
+            <ui:Button Margin="0,0,8,8" Content="Regenerar script" Click="GenScript_Click">
               <ui:Button.Icon><ui:SymbolIcon Symbol="Code24"/></ui:Button.Icon>
             </ui:Button>
             <ui:Button Margin="0,0,8,8" Content="Copiar script" Click="CopyScript_Click">
@@ -326,7 +329,7 @@
           <TextBlock Text="Acerca de" FontSize="20" FontWeight="Bold" Margin="0,4,0,12"/>
           <Border CornerRadius="12" Padding="18" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}">
             <StackPanel>
-              <TextBlock Text="MoreWater Object Spy v0.5.1" FontSize="16" FontWeight="Bold"/>
+              <TextBlock Text="MoreWater Object Spy v0.5.2" FontSize="16" FontWeight="Bold"/>
               <TextBlock Margin="0,6,0,0" TextWrapping="Wrap"
                          Text="Inspector de objetos de UI para QA Automation. Captura el objeto en el instante del clic (UIA / MSAA / Win32) y genera locators para Winium, rankeados por estabilidad y unicidad."/>
               <TextBlock Margin="0,10,0,0" FontSize="12"

@@ -29,16 +29,16 @@ public static class TreeService
         catch { return "(elemento no disponible)"; }
     }
 
-    /// <summary>Hijos directos (control view) de un elemento. Lista vacia si no tiene o falla.</summary>
-    public static List<AutomationElement> Children(AutomationElement el)
+    /// <summary>Hijos directos de un elemento. raw=true usa RawView (arbol completo con contenedores).</summary>
+    public static List<AutomationElement> Children(AutomationElement el, bool raw = false)
     {
         var result = new List<AutomationElement>();
         try
         {
-            var walker = TreeWalker.ControlViewWalker;
+            var walker = raw ? TreeWalker.RawViewWalker : TreeWalker.ControlViewWalker;
             var child = walker.GetFirstChild(el);
             int guard = 0;
-            while (child != null && guard++ < 2000)
+            while (child != null && guard++ < 4000)
             {
                 result.Add(child);
                 child = walker.GetNextSibling(child);
@@ -48,11 +48,11 @@ public static class TreeService
         return result;
     }
 
-    public static bool HasChildren(AutomationElement el)
+    public static bool HasChildren(AutomationElement el, bool raw = false)
     {
         try
         {
-            var walker = TreeWalker.ControlViewWalker;
+            var walker = raw ? TreeWalker.RawViewWalker : TreeWalker.ControlViewWalker;
             return walker.GetFirstChild(el) != null;
         }
         catch { return false; }

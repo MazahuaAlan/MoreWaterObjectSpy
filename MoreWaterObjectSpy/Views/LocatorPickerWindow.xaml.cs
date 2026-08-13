@@ -6,6 +6,7 @@ namespace MoreWaterObjectSpy.Views;
 public partial class LocatorPickerWindow : Wpf.Ui.Controls.FluentWindow
 {
     public string? SelectedLocator { get; private set; }
+    public LocatorCandidate? SelectedCandidate { get; private set; }
 
     public LocatorPickerWindow(CapturedObject obj)
     {
@@ -17,7 +18,7 @@ public partial class LocatorPickerWindow : Wpf.Ui.Controls.FluentWindow
 
     private void Ok_Click(object sender, RoutedEventArgs e)
     {
-        if (LstCand.SelectedItem is LocatorCandidate c) SelectedLocator = c.Locator;
+        if (LstCand.SelectedItem is LocatorCandidate c) { SelectedLocator = c.Locator; SelectedCandidate = c; }
         DialogResult = true;
         Close();
     }

@@ -71,6 +71,9 @@ public static class UIAutomationInspector
             info.IsEnabled = c.IsEnabled;
             info.IsOffscreen = c.IsOffscreen;
             info.NativeWindowHandle = "0x" + c.NativeWindowHandle.ToString("X8");
+            info.HelpText = c.HelpText ?? "";
+            info.HasKeyboardFocus = c.HasKeyboardFocus;
+            info.ItemStatus = c.ItemStatus ?? "";
 
             try
             {

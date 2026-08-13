@@ -48,6 +48,10 @@ public class UIAutomationInfo
     public bool IsEnabled { get; set; }
     public bool IsOffscreen { get; set; }
     public string NativeWindowHandle { get; set; } = "0x0";
+    public string HelpText { get; set; } = "";
+    public bool HasKeyboardFocus { get; set; }
+    public string ItemStatus { get; set; } = "";
+    public string ProviderDescription { get; set; } = "";
     public List<string> Patterns { get; set; } = new();
     public List<AncestorInfo> Ancestors { get; set; } = new();
 
@@ -98,6 +102,9 @@ public class LocatorCandidate
     public int MatchIndex { get; set; }   // posicion 1-based del elemento capturado entre las coincidencias
     public bool Unique { get; set; }
 
+    public bool WiniumCompatible { get; set; } = true;  // false = solo diagnostico (MSAA/Win32)
+    public int Confidence { get; set; }                  // 0-100
+
     [JsonIgnore]
     public string Header
     {
@@ -106,7 +113,9 @@ public class LocatorCandidate
             var star = Rank == 1 ? "★ " : "";
             var uniq = Unique ? " (única ✓)"
                      : MatchCount > 1 ? $" ({MatchCount} coincid., #{MatchIndex})" : "";
-            return $"{star}#{Rank} [{Stability}]{uniq} {Strategy}";
+            var win = WiniumCompatible ? "Winium ✓" : "Winium ✗";
+            var conf = Confidence > 0 ? $"{Confidence}% · " : "";
+            return $"{star}#{Rank} [{Stability}]{uniq}  ·  {conf}{win}  ·  {Strategy}";
         }
     }
 }

@@ -178,8 +178,6 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 
     // ---------------- Grabador de acciones (v0.5) ----------------
 
-    private bool _pageObject; // "Generar script" produce estilo Page Object
-
     private void RecordStatus(string title, string msg)
     {
         RecordBar.Title = title;
@@ -206,15 +204,13 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 
     private void GenScript_Click(object sender, RoutedEventArgs e)
     {
-        _pageObject = true;
         Regenerate();
-        RecordStatus("Script generado (Page Object)", "Se generó el script con declaraciones de objetos + acciones.");
+        RecordStatus("Script regenerado", "Script actualizado con los locators seleccionados (Page Object).");
     }
 
+    // El script en vivo ya es Page Object (declaraciones + acciones) desde que grabas.
     private void Regenerate()
-        => TxtScript.Text = _pageObject
-            ? ScriptGenerator.ToJavaPageObject(_recorder.Steps)
-            : ScriptGenerator.ToJava(_recorder.Steps);
+        => TxtScript.Text = ScriptGenerator.ToJavaPageObject(_recorder.Steps);
 
     private void CopyScript_Click(object sender, RoutedEventArgs e)
     {
@@ -255,6 +251,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         if (dlg.ShowDialog() == true && !string.IsNullOrWhiteSpace(dlg.SelectedLocator))
         {
             step.Locator = dlg.SelectedLocator!;
+            step.Candidate = dlg.SelectedCandidate;
             RefreshSteps();
             Regenerate();
             RecordStatus("Locator actualizado", $"El paso usa ahora: {step.Locator}");
@@ -384,22 +381,36 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     private void LoadTree_Click(object sender, RoutedEventArgs e)
         => StartCountdown(3, "Pon el mouse sobre la ventana a explorar", LoadTree);
 
+    private bool _rawTree;
+
+    private void RawSwitch_Click(object sender, RoutedEventArgs e)
+    {
+        _rawTree = RawSwitch.IsChecked == true;
+        if (Tree.Items.Count > 0 && Tree.Items[0] is TreeViewItem root && root.Tag is AutomationElement el)
+            BuildTreeFrom(el);
+    }
+
     private void LoadTree()
     {
         NativeMethods.GetCursorPos(out var p);
         var root = TreeService.RootWindowFromPoint(p.X, p.Y);
         if (root == null) { Status("⚠ No se pudo obtener la ventana bajo el cursor"); return; }
+        BuildTreeFrom(root);
+        Status($"🌳 Árbol cargado ({(_rawTree ? "Raw" : "Control")}) — expande y selecciona un nodo");
+    }
+
+    private void BuildTreeFrom(AutomationElement root)
+    {
         Tree.Items.Clear();
         var node = MakeNode(root);
         Tree.Items.Add(node);
         node.IsExpanded = true;
-        Status($"🌳 Árbol cargado: {node.Header}");
     }
 
     private TreeViewItem MakeNode(AutomationElement el)
     {
         var n = new TreeViewItem { Tag = el, Header = NodeHeader(el) };
-        if (TreeService.HasChildren(el))
+        if (TreeService.HasChildren(el, _rawTree))
             n.Items.Add(new TreeViewItem { Header = "(cargando…)", Tag = null });
         return n;
     }
@@ -426,7 +437,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         {
             item.Items.Clear();
             if (item.Tag is AutomationElement el)
-                foreach (var ch in TreeService.Children(el))
+                foreach (var ch in TreeService.Children(el, _rawTree))
                     item.Items.Add(MakeNode(ch));
             if (item.Items.Count == 0)
                 item.Items.Add(new TreeViewItem { Header = "(sin hijos)", Foreground = (Brush)FindResource("TextFillColorSecondaryBrush") });
@@ -475,6 +486,9 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             sb.AppendLine($"IsEnabled:        {u.IsEnabled}");
             sb.AppendLine($"IsOffscreen:      {u.IsOffscreen}");
             sb.AppendLine($"NativeHandle:     {u.NativeWindowHandle}");
+            sb.AppendLine($"HelpText:         {u.HelpText}");
+            sb.AppendLine($"HasFocus:         {u.HasKeyboardFocus}");
+            sb.AppendLine($"ItemStatus:       {u.ItemStatus}");
             sb.AppendLine($"Patterns:         {string.Join(", ", u.Patterns)}");
             sb.AppendLine($"SinVentana(WPF):  {u.IsWindowless}");
             if (u.Ancestors.Count > 0)
@@ -531,10 +545,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         {
             foreach (var c in o.Candidates)
             {
-                var star = c.Rank == 1 ? "★ " : "  ";
-                var uniq = c.Unique ? "  (única ✓)"
-                         : c.MatchCount > 1 ? $"  ({c.MatchCount} coincidencias, #{c.MatchIndex})" : "";
-                sb.AppendLine($"{star}#{c.Rank} [{c.Stability}]{uniq} {c.Strategy}");
+                sb.AppendLine($"  {c.Header}");
                 sb.AppendLine($"     {c.Locator}");
                 if (!string.IsNullOrWhiteSpace(c.Alt))
                     sb.AppendLine($"     alt (API, índice 0-based): {c.Alt}");

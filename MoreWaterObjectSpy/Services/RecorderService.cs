@@ -70,7 +70,8 @@ public sealed class RecorderService : IDisposable
                 Kind = StepKind.Click,
                 Target = Short(obj),
                 Locator = obj.RecommendedLocator,
-                Object = obj
+                Object = obj,
+                Candidate = obj.Candidates.Count > 0 ? obj.Candidates[0] : null
             });
             _lastClick = obj;
         }
@@ -109,7 +110,8 @@ public sealed class RecorderService : IDisposable
             Target = _lastClick != null ? Short(_lastClick) : "(campo con foco)",
             Locator = _lastClick?.RecommendedLocator ?? "",
             Value = text,
-            Object = _lastClick
+            Object = _lastClick,
+            Candidate = _lastClick != null && _lastClick.Candidates.Count > 0 ? _lastClick.Candidates[0] : null
         });
     }
 

@@ -7,64 +7,22 @@ namespace MoreWaterObjectSpy.Services;
 /// <summary>Genera el script Winium/Java a partir de los pasos grabados.</summary>
 public static class ScriptGenerator
 {
+    // ---------- Script plano ----------
     public static string ToJava(IReadOnlyList<RecordedStep> steps)
     {
-        var sb = new StringBuilder();
-        sb.AppendLine("// ============================================================");
-        sb.AppendLine("// Script generado por MoreWater Object Spy (grabador v0.5)");
-        sb.AppendLine("// Requiere un WebDriver de Winium/WinAppDriver inicializado como 'driver'.");
-        sb.AppendLine("// ============================================================");
-        sb.AppendLine();
-
-        if (steps.Count == 0)
-        {
-            sb.AppendLine("// (sin pasos grabados)");
-            return sb.ToString();
-        }
-
-        foreach (var s in steps)
-        {
-            switch (s.Kind)
-            {
-                case StepKind.Click:
-                    if (string.IsNullOrWhiteSpace(s.Locator))
-                        sb.AppendLine($"// (sin locator) click en: {s.Target}");
-                    else
-                        sb.AppendLine($"driver.findElement({s.Locator}).click();  // {s.Target}");
-                    break;
-
-                case StepKind.Type:
-                    if (string.IsNullOrWhiteSpace(s.Locator))
-                        sb.AppendLine($"// (sin locator) escribir: \"{Esc(s.Value)}\"");
-                    else
-                        sb.AppendLine($"driver.findElement({s.Locator}).sendKeys(\"{Esc(s.Value)}\");  // {s.Target}");
-                    break;
-
-                case StepKind.Key:
-                    sb.AppendLine($"// tecla {s.Value}   ->   .sendKeys(Keys.{s.Value});");
-                    break;
-            }
-        }
+        var sb = Header("Script");
+        if (steps.Count == 0) { sb.AppendLine("// (sin pasos grabados)"); return sb.ToString(); }
+        foreach (var s in steps) EmitAction(sb, s, LocatorOf(s));
         return sb.ToString();
     }
 
-    /// <summary>
-    /// Genera el script en estilo Page Object: primero declara los objetos (locators con nombre)
-    /// y luego las acciones que los usan. Reutiliza la variable si el mismo locator se repite.
-    /// </summary>
+    // ---------- Script Page Object (declaraciones + acciones) ----------
     public static string ToJavaPageObject(IReadOnlyList<RecordedStep> steps)
     {
-        var sb = new StringBuilder();
-        sb.AppendLine("// ============================================================");
-        sb.AppendLine("// Script (Page Object) generado por MoreWater Object Spy");
-        sb.AppendLine("// Requiere un WebDriver de Winium/WinAppDriver inicializado como 'driver'.");
-        sb.AppendLine("// ============================================================");
-        sb.AppendLine();
-
+        var sb = Header("Script (Page Object)");
         if (steps.Count == 0) { sb.AppendLine("// (sin pasos grabados)"); return sb.ToString(); }
 
-        // 1) Declaraciones de objetos (una variable By por locator distinto)
-        var vars = new Dictionary<string, string>();  // locator -> nombre de variable
+        var vars = new Dictionary<string, string>();
         var used = new HashSet<string>();
         var decls = new StringBuilder();
         foreach (var s in steps)
@@ -78,32 +36,68 @@ public static class ScriptGenerator
         sb.AppendLine("// --- Objetos ---");
         sb.Append(decls);
         sb.AppendLine();
-
-        // 2) Acciones usando las variables declaradas
         sb.AppendLine("// --- Acciones ---");
         foreach (var s in steps)
         {
-            switch (s.Kind)
-            {
-                case StepKind.Click:
-                    sb.AppendLine(string.IsNullOrWhiteSpace(s.Locator)
-                        ? $"// (sin locator) click en: {s.Target}"
-                        : $"driver.findElement({vars[s.Locator]}).click();");
-                    break;
-                case StepKind.Type:
-                    sb.AppendLine(string.IsNullOrWhiteSpace(s.Locator)
-                        ? $"// (sin locator) escribir: \"{Esc(s.Value)}\""
-                        : $"driver.findElement({vars[s.Locator]}).sendKeys(\"{Esc(s.Value)}\");");
-                    break;
-                case StepKind.Key:
-                    sb.AppendLine($"// tecla {s.Value}   ->   .sendKeys(Keys.{s.Value});");
-                    break;
-            }
+            var by = (s.Kind != StepKind.Key && vars.TryGetValue(s.Locator, out var v)) ? v : s.Locator;
+            EmitAction(sb, s, by);
         }
         return sb.ToString();
     }
 
-    /// <summary>Nombre de variable a partir del tipo + nombre del objeto (p.ej. txtUsuario, btnAceptar).</summary>
+    // ---------- Emisor de una accion ----------
+    private static void EmitAction(StringBuilder sb, RecordedStep s, string byExpr)
+    {
+        switch (s.Kind)
+        {
+            case StepKind.Click:
+                if (string.IsNullOrWhiteSpace(s.Locator)) { sb.AppendLine($"// (sin locator) click en: {s.Target}"); break; }
+                sb.AppendLine($"{Access(s, byExpr)}.click();{IndexNote(s)}");
+                break;
+            case StepKind.Type:
+                if (string.IsNullOrWhiteSpace(s.Locator)) { sb.AppendLine($"// (sin locator) escribir: \"{Esc(s.Value)}\""); break; }
+                sb.AppendLine($"{Access(s, byExpr)}.sendKeys(\"{Esc(s.Value)}\");{IndexNote(s)}");
+                break;
+            case StepKind.Key:
+                sb.AppendLine($"// tecla {s.Value}   ->   .sendKeys(Keys.{s.Value});");
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Si el locator NO es unico (varias coincidencias y no es XPath indexado), usa
+    /// findElements(...).get(indice) con el indice 0-based del objeto capturado.
+    /// </summary>
+    private static string Access(RecordedStep s, string byExpr)
+    {
+        var c = s.Candidate;
+        if (c != null && !c.Unique && c.MatchCount > 1 && c.MatchIndex > 0)
+            return $"driver.findElements({byExpr}).get({c.MatchIndex - 1})";
+        return $"driver.findElement({byExpr})";
+    }
+
+    private static string IndexNote(RecordedStep s)
+    {
+        var c = s.Candidate;
+        if (c != null && !c.Unique && c.MatchCount > 1 && c.MatchIndex > 0)
+            return $"  // objeto #{c.MatchIndex} de {c.MatchCount} coincidencias";
+        return "";
+    }
+
+    private static string LocatorOf(RecordedStep s) => s.Locator;
+
+    private static StringBuilder Header(string title)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("// ============================================================");
+        sb.AppendLine($"// {title} generado por MoreWater Object Spy");
+        sb.AppendLine("// Requiere un WebDriver de Winium/WinAppDriver inicializado como 'driver'.");
+        sb.AppendLine("// ============================================================");
+        sb.AppendLine();
+        return sb;
+    }
+
+    // ---------- Nombres de variable ----------
     private static string VarName(RecordedStep s)
     {
         var u = s.Object?.UiAutomation;

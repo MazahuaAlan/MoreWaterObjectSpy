@@ -31,6 +31,7 @@ public static class LocatorGenerator
     public static void Apply(CapturedObject obj)
     {
         var cands = Build(obj);
+        foreach (var c in cands) c.Confidence = ConfidenceOf(c);
         obj.Candidates = cands;
 
         if (cands.Count > 0)
@@ -70,17 +71,29 @@ public static class LocatorGenerator
         var w = obj.Win32;
         var el = u.Element as AutomationElement;
 
-        // --- UIA no disponible: MSAA (Delphi) y luego Win32 real ---
+        // --- UIA no disponible: MSAA (Delphi) y luego Win32 real. OJO: Winium NO localiza por
+        //     MSAA/Win32 (solo por UIA) -> estos candidatos son SOLO diagnostico. ---
         if (!u.Available)
         {
             var m = obj.Msaa;
             if (m.Available && !string.IsNullOrWhiteSpace(m.Name))
-                Add(list, $"MSAA Name (rol {m.Role})", "Media",
-                    "UIA no expuso el control; MSAA si. Verificar unicidad del nombre", $"By.name(\"{Esc(m.Name)}\")");
+            {
+                var c = Add(list, $"MSAA Name (rol {m.Role})", "Media",
+                    "Solo diagnóstico: Winium no localiza por MSAA. Usa teclado/coordenadas.", $"By.name(\"{Esc(m.Name)}\")");
+                c.WiniumCompatible = false;
+            }
             if (!string.IsNullOrWhiteSpace(w.WindowTitle) && w.Hwnd != w.RootHwnd)
-                Add(list, "Win32 WindowText (UIA no disponible)", "Media", null, $"By.name(\"{Esc(w.WindowTitle)}\")");
+            {
+                var c = Add(list, "Win32 WindowText (UIA no disponible)", "Media",
+                    "Solo diagnóstico: Winium no localiza por Win32/HWND.", $"By.name(\"{Esc(w.WindowTitle)}\")");
+                c.WiniumCompatible = false;
+            }
             if (!string.IsNullOrWhiteSpace(w.ClassName))
-                Add(list, "Win32 ClassName", "Baja", "Puede repetirse; verificar unicidad", $"By.className(\"{Esc(w.ClassName)}\")");
+            {
+                var c = Add(list, "Win32 ClassName", "Baja",
+                    "Solo diagnóstico: Winium no localiza por Win32/HWND.", $"By.className(\"{Esc(w.ClassName)}\")");
+                c.WiniumCompatible = false;
+            }
             Rank(list);
             return list;
         }
@@ -199,8 +212,21 @@ public static class LocatorGenerator
 
         // 6) HWND: solo Win32 real (no WPF sin ventana) y si no es la ventana raiz
         if (!isWpf && w.Hwnd != "0x0" && w.Hwnd != w.RootHwnd)
-            Add(list, "HWND (volatil, solo sesion actual)", "Volatil",
-                "El handle cambia en cada ejecucion; no usar en scripts", $"// HWND: {w.Hwnd}", action);
+        {
+            var c = Add(list, "HWND (volatil, solo sesion actual)", "Volatil",
+                "El handle cambia en cada ejecucion; Winium no lo usa. Solo diagnóstico.", $"// HWND: {w.Hwnd}", action);
+            c.WiniumCompatible = false;
+        }
+    }
+
+    /// <summary>% de confianza derivado de estabilidad, unicidad y compatibilidad con Winium.</summary>
+    private static int ConfidenceOf(LocatorCandidate c)
+    {
+        int conf = c.Stability switch { "Alta" => 90, "Media" => 70, "Baja" => 45, _ => 20 };
+        if (c.Unique) conf = Math.Min(100, conf + 10);
+        else if (c.MatchCount > 1) conf = Math.Max(15, conf - 25);
+        if (!c.WiniumCompatible) conf = Math.Min(conf, 40);
+        return conf;
     }
 
     /// <summary>Genera el locator indexado usando la mejor base disponible (menos coincidencias + mas estable).</summary>

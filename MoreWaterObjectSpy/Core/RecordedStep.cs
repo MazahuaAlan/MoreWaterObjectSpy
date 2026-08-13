@@ -16,6 +16,10 @@ public class RecordedStep
     [JsonIgnore]
     public CapturedObject? Object { get; set; }
 
+    /// <summary>Candidato de locator elegido (para saber unicidad/indice al generar el script).</summary>
+    [JsonIgnore]
+    public LocatorCandidate? Candidate { get; set; }
+
     [JsonIgnore]
     public string Display => Kind switch
     {
