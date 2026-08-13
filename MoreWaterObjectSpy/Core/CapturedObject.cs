@@ -97,6 +97,18 @@ public class LocatorCandidate
     public int MatchCount { get; set; }
     public int MatchIndex { get; set; }   // posicion 1-based del elemento capturado entre las coincidencias
     public bool Unique { get; set; }
+
+    [JsonIgnore]
+    public string Header
+    {
+        get
+        {
+            var star = Rank == 1 ? "★ " : "";
+            var uniq = Unique ? " (única ✓)"
+                     : MatchCount > 1 ? $" ({MatchCount} coincid., #{MatchIndex})" : "";
+            return $"{star}#{Rank} [{Stability}]{uniq} {Strategy}";
+        }
+    }
 }
 
 /// <summary>

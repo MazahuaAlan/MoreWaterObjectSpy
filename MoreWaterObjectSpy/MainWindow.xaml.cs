@@ -2,6 +2,7 @@ using System.Text;
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -33,7 +34,6 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     public MainWindow()
     {
         InitializeComponent();
-        LstHistorial.DisplayMemberPath = "DisplayName";
         _cd.Tick += OnCountdownTick;
         Tree.AddHandler(TreeViewItem.ExpandedEvent, new RoutedEventHandler(OnItemExpanded));
         _service.ObjectCaptured += obj => Dispatcher.BeginInvoke(() => OnCaptured(obj));
@@ -178,33 +178,49 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 
     // ---------------- Grabador de acciones (v0.5) ----------------
 
+    private bool _pageObject; // "Generar script" produce estilo Page Object
+
+    private void RecordStatus(string title, string msg)
+    {
+        RecordBar.Title = title;
+        RecordBar.Message = msg;
+    }
+
     private void Record_Click(object sender, RoutedEventArgs e)
     {
         if (_recorder.IsRecording)
         {
             _recorder.Stop();
             BtnRecord.Content = "Grabar";
-            RecordBar.Title = "Grabación detenida";
-            RecordBar.Message = $"{_recorder.Steps.Count} pasos grabados. Usa 'Generar script' para el código Winium.";
-            GenScript();
+            RecordStatus("Grabación detenida",
+                $"{_recorder.Steps.Count} pasos grabados. 'Generar script' = versión Page Object (declaraciones + acciones).");
+            Regenerate();
         }
         else
         {
             _recorder.Start();
             BtnRecord.Content = "Detener";
-            RecordBar.Title = "Grabando…";
-            RecordBar.Message = "Opera la app objetivo: los clicks y lo que escribas se registran como pasos.";
+            RecordStatus("Grabando…", "Opera la app objetivo: los clicks y lo que escribas se registran como pasos.");
         }
     }
 
-    private void GenScript_Click(object sender, RoutedEventArgs e) => GenScript();
-    private void GenScript() => TxtScript.Text = ScriptGenerator.ToJava(_recorder.Steps);
+    private void GenScript_Click(object sender, RoutedEventArgs e)
+    {
+        _pageObject = true;
+        Regenerate();
+        RecordStatus("Script generado (Page Object)", "Se generó el script con declaraciones de objetos + acciones.");
+    }
+
+    private void Regenerate()
+        => TxtScript.Text = _pageObject
+            ? ScriptGenerator.ToJavaPageObject(_recorder.Steps)
+            : ScriptGenerator.ToJava(_recorder.Steps);
 
     private void CopyScript_Click(object sender, RoutedEventArgs e)
     {
-        if (string.IsNullOrWhiteSpace(TxtScript.Text)) GenScript();
+        if (string.IsNullOrWhiteSpace(TxtScript.Text)) Regenerate();
         try { Clipboard.SetText(TxtScript.Text); } catch { }
-        Status("📋 Script copiado al portapapeles");
+        RecordStatus("Script copiado", "El script se copió al portapapeles.");
     }
 
     private void ExportScript_Click(object sender, RoutedEventArgs e)
@@ -215,23 +231,42 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
-        var path = ScriptGenerator.ExportToFile(_recorder.Steps);
-        Status("💾 Script exportado: " + path);
+        if (string.IsNullOrWhiteSpace(TxtScript.Text)) Regenerate();
+        var path = ScriptGenerator.SaveText(TxtScript.Text);
+        RecordStatus("Script exportado", path);
     }
 
     private void ClearSteps_Click(object sender, RoutedEventArgs e)
     {
         _recorder.Clear();
         TxtScript.Clear();
+        RecordStatus("Grabador de acciones", "Pasos limpiados. Pulsa Grabar para empezar de nuevo.");
+    }
+
+    private void Steps_DoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (LstSteps.SelectedItem is not RecordedStep step) return;
+        if (step.Object == null || step.Object.Candidates.Count == 0)
+        {
+            RecordStatus("Sin locators alternativos", "Este paso no tiene candidatos (p.ej. una tecla Enter/Tab).");
+            return;
+        }
+        var dlg = new Views.LocatorPickerWindow(step.Object) { Owner = this };
+        if (dlg.ShowDialog() == true && !string.IsNullOrWhiteSpace(dlg.SelectedLocator))
+        {
+            step.Locator = dlg.SelectedLocator!;
+            RefreshSteps();
+            Regenerate();
+            RecordStatus("Locator actualizado", $"El paso usa ahora: {step.Locator}");
+        }
     }
 
     private void RefreshSteps()
     {
         LstSteps.Items.Clear();
-        foreach (var s in _recorder.Steps) LstSteps.Items.Add(s.Display);
+        foreach (var s in _recorder.Steps) LstSteps.Items.Add(s);
         if (LstSteps.Items.Count > 0) LstSteps.ScrollIntoView(LstSteps.Items[^1]);
-        if (RecordPanel.Visibility == Visibility.Visible)
-            TxtScript.Text = ScriptGenerator.ToJava(_recorder.Steps);
+        if (RecordPanel.Visibility == Visibility.Visible) Regenerate();
     }
 
     // ---------------- Cuenta regresiva ----------------
@@ -363,10 +398,25 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 
     private TreeViewItem MakeNode(AutomationElement el)
     {
-        var n = new TreeViewItem { Header = TreeService.Label(el), Tag = el };
+        var n = new TreeViewItem { Tag = el, Header = NodeHeader(el) };
         if (TreeService.HasChildren(el))
             n.Items.Add(new TreeViewItem { Header = "(cargando…)", Tag = null });
         return n;
+    }
+
+    private static StackPanel NodeHeader(AutomationElement el)
+    {
+        string type = "";
+        try { type = el.Current.ControlType?.ProgrammaticName?.Replace("ControlType.", "") ?? ""; } catch { }
+        var sp = new StackPanel { Orientation = Orientation.Horizontal };
+        sp.Children.Add(new Wpf.Ui.Controls.SymbolIcon
+        {
+            Symbol = ControlTypeIcon.Symbol(type),
+            FontSize = 14,
+            Margin = new Thickness(0, 0, 6, 0)
+        });
+        sp.Children.Add(new TextBlock { Text = TreeService.Label(el), VerticalAlignment = VerticalAlignment.Center });
+        return sp;
     }
 
     private void OnItemExpanded(object sender, RoutedEventArgs e)

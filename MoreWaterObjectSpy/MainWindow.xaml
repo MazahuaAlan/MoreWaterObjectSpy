@@ -14,7 +14,7 @@
     </Grid.RowDefinitions>
 
     <!-- Barra de titulo Fluent -->
-    <ui:TitleBar Grid.Row="0" Title="MoreWater Object Spy v0.4.1">
+    <ui:TitleBar Grid.Row="0" Title="MoreWater Object Spy v0.5.1">
       <ui:TitleBar.Icon>
         <ui:SymbolIcon Symbol="Search24"/>
       </ui:TitleBar.Icon>
@@ -163,7 +163,17 @@
                 <ListBox x:Name="LstHistorial" Background="Transparent" BorderThickness="0"
                          Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                          FontFamily="{StaticResource Mono}" FontSize="12"
-                         SelectionChanged="Hist_SelectionChanged"/>
+                         SelectionChanged="Hist_SelectionChanged">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate>
+                      <StackPanel Orientation="Horizontal">
+                        <ui:SymbolIcon Symbol="{Binding UiAutomation.ControlType, Converter={StaticResource TypeIcon}}"
+                                       FontSize="15" Margin="0,0,8,0" Foreground="{StaticResource AccentBlue}"/>
+                        <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center"/>
+                      </StackPanel>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
               </DockPanel>
             </Border>
 
@@ -270,7 +280,19 @@
                            Margin="8,6,0,6" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                 <ListBox x:Name="LstSteps" Background="Transparent" BorderThickness="0"
                          Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                         FontFamily="{StaticResource Mono}" FontSize="12"/>
+                         FontFamily="{StaticResource Mono}" FontSize="12"
+                         MouseDoubleClick="Steps_DoubleClick"
+                         ToolTip="Doble clic en un paso para elegir otro locator">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate>
+                      <StackPanel Orientation="Horizontal">
+                        <ui:SymbolIcon Symbol="{Binding Object.UiAutomation.ControlType, Converter={StaticResource TypeIcon}}"
+                                       FontSize="15" Margin="0,0,8,0" Foreground="{StaticResource AccentBlue}"/>
+                        <TextBlock Text="{Binding Display}" VerticalAlignment="Center"/>
+                      </StackPanel>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
               </DockPanel>
             </Border>
             <Border Grid.Column="2" CornerRadius="12" ClipToBounds="True"
@@ -304,7 +326,7 @@
           <TextBlock Text="Acerca de" FontSize="20" FontWeight="Bold" Margin="0,4,0,12"/>
           <Border CornerRadius="12" Padding="18" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}">
             <StackPanel>
-              <TextBlock Text="MoreWater Object Spy v0.4.1" FontSize="16" FontWeight="Bold"/>
+              <TextBlock Text="MoreWater Object Spy v0.5.1" FontSize="16" FontWeight="Bold"/>
               <TextBlock Margin="0,6,0,0" TextWrapping="Wrap"
                          Text="Inspector de objetos de UI para QA Automation. Captura el objeto en el instante del clic (UIA / MSAA / Win32) y genera locators para Winium, rankeados por estabilidad y unicidad."/>
               <TextBlock Margin="0,10,0,0" FontSize="12"
