@@ -95,4 +95,40 @@ internal static class NativeMethods
 
     [DllImport("oleacc.dll", CharSet = CharSet.Unicode)]
     public static extern uint GetStateText(uint dwStateBit, StringBuilder lpszState, uint cchStateMax);
+
+    // ---- Hook de teclado (grabador de acciones) ----
+    public const int WH_KEYBOARD_LL = 13;
+    public const int WM_KEYDOWN = 0x0100;
+    public const int WM_SYSKEYDOWN = 0x0104;
+
+    public const uint VK_BACK = 0x08;
+    public const uint VK_TAB = 0x09;
+    public const uint VK_RETURN = 0x0D;
+    public const uint VK_ESCAPE = 0x1B;
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct KBDLLHOOKSTRUCT
+    {
+        public uint vkCode;
+        public uint scanCode;
+        public uint flags;
+        public uint time;
+        public IntPtr dwExtraInfo;
+    }
+
+    [DllImport("user32.dll")]
+    public static extern bool GetKeyboardState(byte[] lpKeyState);
+
+    [DllImport("user32.dll")]
+    public static extern uint MapVirtualKey(uint uCode, uint uMapType);
+
+    [DllImport("user32.dll")]
+    public static extern int ToUnicodeEx(uint wVirtKey, uint wScanCode, byte[] lpKeyState,
+        StringBuilder pwszBuff, int cchBuff, uint wFlags, IntPtr dwhkl);
+
+    [DllImport("user32.dll")]
+    public static extern IntPtr GetKeyboardLayout(uint idThread);
+
+    [DllImport("user32.dll")]
+    public static extern IntPtr GetForegroundWindow();
 }

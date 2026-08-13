@@ -20,6 +20,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     private readonly CaptureService _service = new();
     private readonly HighlightOverlay _overlay = new();
     private readonly DispatcherTimer _cd = new() { Interval = TimeSpan.FromSeconds(1) };
+    private readonly RecorderService _recorder;
 
     private CapturedObject? _current;
     private bool _dark;
@@ -36,6 +37,9 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         _cd.Tick += OnCountdownTick;
         Tree.AddHandler(TreeViewItem.ExpandedEvent, new RoutedEventHandler(OnItemExpanded));
         _service.ObjectCaptured += obj => Dispatcher.BeginInvoke(() => OnCaptured(obj));
+
+        _recorder = new RecorderService(_service);
+        _recorder.Changed += () => Dispatcher.BeginInvoke(RefreshSteps);
 
         TxtProps.Text =
             "MoreWater Object Spy\r\n\r\n" +
@@ -83,6 +87,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         }
         _cd.Stop();
         try { _overlay.Close(); } catch { }
+        _recorder.Dispose();
         _service.Dispose();
         base.OnClosed(e);
     }
@@ -156,6 +161,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 
     private void Nav_Click(object sender, RoutedEventArgs e)
         => ShowView(sender == NavArbol ? "arbol"
+                  : sender == NavGrabar ? "grabar"
                   : sender == NavConfig ? "config"
                   : sender == NavAcerca ? "about" : "cap");
 
@@ -165,8 +171,67 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     {
         CapturePanel.Visibility = v == "cap" ? Visibility.Visible : Visibility.Collapsed;
         TreePanel.Visibility = v == "arbol" ? Visibility.Visible : Visibility.Collapsed;
+        RecordPanel.Visibility = v == "grabar" ? Visibility.Visible : Visibility.Collapsed;
         ConfigPanel.Visibility = v == "config" ? Visibility.Visible : Visibility.Collapsed;
         AboutPanel.Visibility = v == "about" ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    // ---------------- Grabador de acciones (v0.5) ----------------
+
+    private void Record_Click(object sender, RoutedEventArgs e)
+    {
+        if (_recorder.IsRecording)
+        {
+            _recorder.Stop();
+            BtnRecord.Content = "Grabar";
+            RecordBar.Title = "Grabación detenida";
+            RecordBar.Message = $"{_recorder.Steps.Count} pasos grabados. Usa 'Generar script' para el código Winium.";
+            GenScript();
+        }
+        else
+        {
+            _recorder.Start();
+            BtnRecord.Content = "Detener";
+            RecordBar.Title = "Grabando…";
+            RecordBar.Message = "Opera la app objetivo: los clicks y lo que escribas se registran como pasos.";
+        }
+    }
+
+    private void GenScript_Click(object sender, RoutedEventArgs e) => GenScript();
+    private void GenScript() => TxtScript.Text = ScriptGenerator.ToJava(_recorder.Steps);
+
+    private void CopyScript_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(TxtScript.Text)) GenScript();
+        try { Clipboard.SetText(TxtScript.Text); } catch { }
+        Status("📋 Script copiado al portapapeles");
+    }
+
+    private void ExportScript_Click(object sender, RoutedEventArgs e)
+    {
+        if (_recorder.Steps.Count == 0)
+        {
+            MessageBox.Show(this, "No hay pasos grabados.", "MoreWater Object Spy",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        var path = ScriptGenerator.ExportToFile(_recorder.Steps);
+        Status("💾 Script exportado: " + path);
+    }
+
+    private void ClearSteps_Click(object sender, RoutedEventArgs e)
+    {
+        _recorder.Clear();
+        TxtScript.Clear();
+    }
+
+    private void RefreshSteps()
+    {
+        LstSteps.Items.Clear();
+        foreach (var s in _recorder.Steps) LstSteps.Items.Add(s.Display);
+        if (LstSteps.Items.Count > 0) LstSteps.ScrollIntoView(LstSteps.Items[^1]);
+        if (RecordPanel.Visibility == Visibility.Visible)
+            TxtScript.Text = ScriptGenerator.ToJava(_recorder.Steps);
     }
 
     // ---------------- Cuenta regresiva ----------------

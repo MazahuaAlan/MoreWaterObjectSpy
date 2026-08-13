@@ -86,6 +86,12 @@
                 <TextBlock Text="Árbol de elementos" Margin="12,0,0,0" VerticalAlignment="Center"/>
               </StackPanel>
             </RadioButton>
+            <RadioButton x:Name="NavGrabar" Style="{StaticResource NavItem}" GroupName="nav" Click="Nav_Click">
+              <StackPanel Orientation="Horizontal">
+                <ui:SymbolIcon Symbol="Record24" FontSize="16"/>
+                <TextBlock Text="Grabar acciones" Margin="12,0,0,0" VerticalAlignment="Center"/>
+              </StackPanel>
+            </RadioButton>
             <RadioButton x:Name="NavConfig" Style="{StaticResource NavItem}" GroupName="nav" Click="Nav_Click">
               <StackPanel Orientation="Horizontal">
                 <ui:SymbolIcon Symbol="Settings24" FontSize="16"/>
@@ -220,6 +226,65 @@
           </Grid>
         </Grid>
 
+        <!-- Vista Grabar acciones -->
+        <Grid x:Name="RecordPanel" Visibility="Collapsed">
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+          </Grid.RowDefinitions>
+
+          <ui:InfoBar x:Name="RecordBar" Grid.Row="0" IsOpen="True" IsClosable="False"
+                      Severity="Informational" Title="Grabador de acciones"
+                      Message="Pulsa Grabar y opera la app: los clicks y lo que escribas se convierten en pasos y en un script Winium."/>
+
+          <WrapPanel Grid.Row="1" Margin="0,12,0,12">
+            <ui:Button x:Name="BtnRecord" Appearance="Primary" Margin="0,0,8,8"
+                       Content="Grabar" Click="Record_Click">
+              <ui:Button.Icon><ui:SymbolIcon Symbol="Record24"/></ui:Button.Icon>
+            </ui:Button>
+            <ui:Button Margin="0,0,8,8" Content="Generar script" Click="GenScript_Click">
+              <ui:Button.Icon><ui:SymbolIcon Symbol="Code24"/></ui:Button.Icon>
+            </ui:Button>
+            <ui:Button Margin="0,0,8,8" Content="Copiar script" Click="CopyScript_Click">
+              <ui:Button.Icon><ui:SymbolIcon Symbol="Copy24"/></ui:Button.Icon>
+            </ui:Button>
+            <ui:Button Margin="0,0,8,8" Content="Exportar .java" Click="ExportScript_Click">
+              <ui:Button.Icon><ui:SymbolIcon Symbol="Save24"/></ui:Button.Icon>
+            </ui:Button>
+            <ui:Button Margin="0,0,8,8" Content="Limpiar pasos" Click="ClearSteps_Click">
+              <ui:Button.Icon><ui:SymbolIcon Symbol="Delete24"/></ui:Button.Icon>
+            </ui:Button>
+          </WrapPanel>
+
+          <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="360"/>
+              <ColumnDefinition Width="14"/>
+              <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Border Grid.Column="0" CornerRadius="12" Padding="6"
+                    Background="{DynamicResource CardBackgroundFillColorDefaultBrush}">
+              <DockPanel>
+                <TextBlock DockPanel.Dock="Top" Text="PASOS GRABADOS" FontSize="10" FontWeight="SemiBold"
+                           Margin="8,6,0,6" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                <ListBox x:Name="LstSteps" Background="Transparent" BorderThickness="0"
+                         Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                         FontFamily="{StaticResource Mono}" FontSize="12"/>
+              </DockPanel>
+            </Border>
+            <Border Grid.Column="2" CornerRadius="12" ClipToBounds="True"
+                    Background="{DynamicResource CardBackgroundFillColorDefaultBrush}">
+              <DockPanel>
+                <TextBlock DockPanel.Dock="Top" Text="SCRIPT GENERADO (Winium / Java)" FontSize="10"
+                           FontWeight="SemiBold" Margin="14,10,0,0"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                <TextBox x:Name="TxtScript" Style="{StaticResource MonoBox}"/>
+              </DockPanel>
+            </Border>
+          </Grid>
+        </Grid>
+
         <!-- Vista Configuracion -->
         <StackPanel x:Name="ConfigPanel" Visibility="Collapsed" MaxWidth="560" HorizontalAlignment="Left">
           <TextBlock Text="Configuración" FontSize="20" FontWeight="Bold" Margin="0,4,0,12"/>
@@ -245,6 +310,12 @@
               <TextBlock Margin="0,10,0,0" FontSize="12"
                          Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                          Text="Software de uso libre bajo licencia MIT · by MazahuaAlan"/>
+              <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                <ui:HyperlinkButton Content="📄 Documentación" Margin="0,0,8,0"
+                                    NavigateUri="https://mazahuaalan.github.io/MoreWaterObjectSpy-docs/"/>
+                <ui:HyperlinkButton Content="🔗 Repositorio en GitHub"
+                                    NavigateUri="https://github.com/MazahuaAlan/MoreWaterObjectSpy"/>
+              </StackPanel>
             </StackPanel>
           </Border>
         </StackPanel>
