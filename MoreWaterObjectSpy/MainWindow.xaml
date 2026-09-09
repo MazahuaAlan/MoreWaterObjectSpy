@@ -14,7 +14,7 @@
     </Grid.RowDefinitions>
 
     <!-- Barra de titulo Fluent -->
-    <ui:TitleBar Grid.Row="0" Title="MoreWater Object Spy v0.5.2">
+    <ui:TitleBar Grid.Row="0" Title="MoreWater Object Spy v0.5.3">
       <ui:TitleBar.Icon>
         <ui:SymbolIcon Symbol="Search24"/>
       </ui:TitleBar.Icon>
@@ -210,16 +210,32 @@
         <Grid x:Name="TreePanel" Visibility="Collapsed">
           <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
           </Grid.RowDefinitions>
-          <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,4,0,12">
-            <ui:Button Content="Cargar árbol (ventana bajo cursor, 3s)" Click="LoadTree_Click">
+
+          <ui:InfoBar x:Name="TreeBar" Grid.Row="0" IsOpen="True" IsClosable="False"
+                      Severity="Informational" Title="Árbol de elementos"
+                      Message="Carga la ventana bajo el cursor y selecciona un nodo para ver y copiar sus propiedades."/>
+
+          <WrapPanel Grid.Row="1" Margin="0,12,0,12">
+            <ui:Button Margin="0,0,8,8" Content="Cargar árbol (ventana bajo cursor, 3s)" Click="LoadTree_Click">
               <ui:Button.Icon><ui:SymbolIcon Symbol="TextBulletListTree24"/></ui:Button.Icon>
             </ui:Button>
+            <ui:Button Margin="0,0,8,8" Content="Copiar propiedades" Click="TreeCopyProps_Click">
+              <ui:Button.Icon><ui:SymbolIcon Symbol="Copy24"/></ui:Button.Icon>
+            </ui:Button>
+            <ui:Button Margin="0,0,8,8" Content="Copiar locator" Click="TreeCopyLoc_Click">
+              <ui:Button.Icon><ui:SymbolIcon Symbol="Copy24"/></ui:Button.Icon>
+            </ui:Button>
+            <ui:Button Margin="0,0,8,8" Content="Limpiar árbol" Click="ClearTree_Click">
+              <ui:Button.Icon><ui:SymbolIcon Symbol="Delete24"/></ui:Button.Icon>
+            </ui:Button>
             <ui:ToggleSwitch x:Name="RawSwitch" Content="Vista Raw (árbol completo)"
-                             Margin="18,0,0,0" VerticalAlignment="Center" Click="RawSwitch_Click"/>
-          </StackPanel>
-          <Grid Grid.Row="1">
+                             Margin="10,0,0,8" VerticalAlignment="Center" Click="RawSwitch_Click"/>
+          </WrapPanel>
+
+          <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
               <ColumnDefinition Width="400"/>
               <ColumnDefinition Width="14"/>
@@ -234,7 +250,12 @@
             </Border>
             <Border Grid.Column="2" CornerRadius="12" ClipToBounds="True"
                     Background="{DynamicResource CardBackgroundFillColorDefaultBrush}">
-              <TextBox x:Name="TxtTreeProps" Style="{StaticResource MonoBox}"/>
+              <DockPanel>
+                <TextBlock DockPanel.Dock="Top" Text="PROPIEDADES DEL NODO SELECCIONADO" FontSize="10"
+                           FontWeight="SemiBold" Margin="14,10,0,0"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                <TextBox x:Name="TxtTreeProps" Style="{StaticResource MonoBox}"/>
+              </DockPanel>
             </Border>
           </Grid>
         </Grid>
@@ -329,7 +350,7 @@
           <TextBlock Text="Acerca de" FontSize="20" FontWeight="Bold" Margin="0,4,0,12"/>
           <Border CornerRadius="12" Padding="18" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}">
             <StackPanel>
-              <TextBlock Text="MoreWater Object Spy v0.5.2" FontSize="16" FontWeight="Bold"/>
+              <TextBlock Text="MoreWater Object Spy v0.5.3" FontSize="16" FontWeight="Bold"/>
               <TextBlock Margin="0,6,0,0" TextWrapping="Wrap"
                          Text="Inspector de objetos de UI para QA Automation. Captura el objeto en el instante del clic (UIA / MSAA / Win32) y genera locators para Winium, rankeados por estabilidad y unicidad."/>
               <TextBlock Margin="0,10,0,0" FontSize="12"

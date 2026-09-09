@@ -10,6 +10,8 @@ using Wpf.Ui.Appearance;
 using MoreWaterObjectSpy.Core;
 using MoreWaterObjectSpy.Infrastructure;
 using MoreWaterObjectSpy.Services;
+// Alias: no se puede 'using Wpf.Ui.Controls' (choca con System.Windows.Controls).
+using Sev = Wpf.Ui.Controls.InfoBarSeverity;
 
 namespace MoreWaterObjectSpy;
 
@@ -23,7 +25,8 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     private readonly DispatcherTimer _cd = new() { Interval = TimeSpan.FromSeconds(1) };
     private readonly RecorderService _recorder;
 
-    private CapturedObject? _current;
+    private CapturedObject? _current;     // seleccion de la vista Capturas
+    private CapturedObject? _treeCurrent; // seleccion de la vista Arbol (independiente)
     private bool _dark;
     private int _cdLeft;
     private string _cdMsg = "";
@@ -378,8 +381,19 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 
     // ---------------- Arbol ----------------
 
+    /// <summary>Mensajes de la vista Arbol: EstadoBar vive en el panel Capturas y aqui no se ve.</summary>
+    private void TreeStatus(string title, string msg, Sev severity = Sev.Informational)
+    {
+        TreeBar.Severity = severity;
+        TreeBar.Title = title;
+        TreeBar.Message = msg;
+    }
+
     private void LoadTree_Click(object sender, RoutedEventArgs e)
-        => StartCountdown(3, "Pon el mouse sobre la ventana a explorar", LoadTree);
+    {
+        TreeStatus("Cargando árbol", "Pon el mouse sobre la ventana a explorar — 3s...");
+        StartCountdown(3, "Pon el mouse sobre la ventana a explorar", LoadTree);
+    }
 
     private bool _rawTree;
 
@@ -387,16 +401,66 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     {
         _rawTree = RawSwitch.IsChecked == true;
         if (Tree.Items.Count > 0 && Tree.Items[0] is TreeViewItem root && root.Tag is AutomationElement el)
+        {
             BuildTreeFrom(el);
+            TreeStatus($"Vista {(_rawTree ? "Raw" : "Control")}", "Árbol reconstruido con la nueva vista.");
+        }
+        else
+        {
+            TreeStatus($"Vista {(_rawTree ? "Raw" : "Control")}",
+                "Se aplicará al cargar el árbol.");
+        }
     }
 
     private void LoadTree()
     {
         NativeMethods.GetCursorPos(out var p);
         var root = TreeService.RootWindowFromPoint(p.X, p.Y);
-        if (root == null) { Status("⚠ No se pudo obtener la ventana bajo el cursor"); return; }
+        if (root == null)
+        {
+            TreeStatus("No se pudo cargar", "No se obtuvo la ventana bajo el cursor.", Sev.Warning);
+            return;
+        }
         BuildTreeFrom(root);
-        Status($"🌳 Árbol cargado ({(_rawTree ? "Raw" : "Control")}) — expande y selecciona un nodo");
+        TreeStatus($"Árbol cargado (vista {(_rawTree ? "Raw" : "Control")})",
+            "Expande y selecciona un nodo para ver sus propiedades.");
+    }
+
+    private void ClearTree_Click(object sender, RoutedEventArgs e)
+    {
+        Tree.Items.Clear();
+        TxtTreeProps.Clear();
+        _treeCurrent = null;
+        TreeStatus("Árbol limpio", "Pulsa 'Cargar árbol' para explorar otra ventana.");
+    }
+
+    private void TreeCopyProps_Click(object sender, RoutedEventArgs e)
+        => CopyFromTree(FormatProps, "las propiedades", "Propiedades del nodo copiadas");
+
+    private void TreeCopyLoc_Click(object sender, RoutedEventArgs e)
+        => CopyFromTree(o => o.RecommendedLocator, "el locator", "Locator recomendado copiado");
+
+    private void CopyFromTree(Func<CapturedObject, string> sel, string what, string done)
+    {
+        if (_treeCurrent == null)
+        {
+            TreeStatus("Sin selección", $"Selecciona un nodo del árbol para copiar {what}.", Sev.Warning);
+            return;
+        }
+        var text = sel(_treeCurrent);
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            TreeStatus("Nada que copiar", "El nodo seleccionado no devolvió texto.", Sev.Warning);
+            return;
+        }
+        try { Clipboard.SetText(text); }
+        catch (Exception ex)
+        {
+            // A diferencia del resto de la app, aqui no se traga la excepcion: copiar ES la funcion.
+            TreeStatus("No se pudo copiar", "El portapapeles está ocupado: " + ex.Message, Sev.Error);
+            return;
+        }
+        TreeStatus("Copiado", $"{done} al portapapeles ({text.Length} caracteres).", Sev.Success);
     }
 
     private void BuildTreeFrom(AutomationElement root)
@@ -450,13 +514,19 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         try
         {
             var obj = TreeService.ToCaptured(el, ++_treeIndex);
-            _current = obj;
+            _treeCurrent = obj;
             TxtTreeProps.Text = FormatProps(obj);
             Highlight(obj);
+            TreeStatus("Nodo seleccionado",
+                string.IsNullOrWhiteSpace(obj.RecommendedLocator)
+                    ? "Sin locator utilizable. 'Copiar propiedades' sigue disponible."
+                    : "Locator recomendado: " + obj.RecommendedLocator);
         }
         catch (Exception ex)
         {
+            _treeCurrent = null;
             TxtTreeProps.Text = "No se pudo leer el elemento (pudo cambiar la app):\r\n" + ex.Message;
+            TreeStatus("No se pudo leer el nodo", ex.Message, Sev.Warning);
         }
     }
 
