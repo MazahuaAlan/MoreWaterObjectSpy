@@ -3,6 +3,8 @@
 > Inspector de objetos de UI para QA Automation, orientado a generar **locators listos para Winium/WinAppDriver**
 > en aplicaciones de escritorio Windows (Delphi/Win32, WPF, WinForms, UWP/WinUI).
 
+> **¿Buscas cómo se usa, no cómo está hecho?** → [`GUIA_VISUAL.md`](GUIA_VISUAL.md), la guía gráfica de cada vista.
+
 ---
 
 ## 1. Problema que resuelve
@@ -91,6 +93,10 @@ procese el evento y la ventana pueda cambiar. El objeto capturado sobrevive aunq
 La consulta UIA (más lenta) corre después en segundo plano. Si para entonces la ventana ya desapareció, al menos las
 propiedades Win32 quedaron congeladas.
 
+El resultado de ese flujo, sobre un control real del Bloc de notas — los tres motores y los locators en una sola pantalla:
+
+![Vista Capturas con un control capturado](img/01-capturas.png)
+
 ### Modos de captura
 - **F8** — captura al hacer clic (hook global).
 - **F9 / botón "Capturar en 3s"** — captura el objeto **bajo el cursor sin clic**. Cuenta regresiva de 3s para posicionar
@@ -155,6 +161,11 @@ Al hacer clic sobre el **texto** "Buscar" dentro de un botón:
 Con eso, cada candidato se marca como `(única ✓)` o `(N coincidencias, #i)`, y cuando hay duplicados se ofrece el
 XPath indexado correcto.
 
+Así se ve el ranking ya resuelto en la UI — puesto, estabilidad, unicidad, confianza, compatibilidad con Winium
+y la advertencia concreta de cada candidato:
+
+![Locators rankeados en el panel de propiedades](img/02-arbol.png)
+
 ---
 
 ## 7. Árbol de objetos (pestaña Árbol)
@@ -163,9 +174,38 @@ Explorador jerárquico de la ventana con **carga perezosa**: cada nodo carga sus
 cientos de nodos WPF). Al seleccionar un nodo se muestran sus propiedades + locators y se **resalta en pantalla**.
 Es una *foto* del árbol en un instante; si la app cambia, se recarga con el botón "Cargar árbol".
 
+El toggle **Vista Raw** alterna el walker: `ControlViewWalker` (la vista limpia, equivalente a lo que recorre Winium)
+frente a `RawViewWalker` (todos los elementos intermedios). Desde la vista se puede copiar el bloque de propiedades
+del nodo o su locator recomendado, sin pasar por la captura al clic.
+
 ---
 
-## 8. Resaltado en pantalla (A3)
+## 8. Grabador de acciones
+
+`RecorderService` reutiliza el `CaptureService` (cada clic ya produce un `CapturedObject` con sus candidatos) y le
+suma un `KeyboardHook` (`WH_KEYBOARD_LL`) que traduce cada tecla con `ToUnicodeEx`, respetando Shift, CapsLock y el
+layout del teclado.
+
+La escritura **no** genera un paso por tecla: los caracteres se acumulan en un buffer que se vuelca (`Flush`) cuando
+llega el siguiente clic, un Enter/Tab/Escape, o al detener la grabación. El resultado es un paso *Escribir* por campo.
+
+```
+clic  →  Flush() del buffer anterior  →  paso Click   (y pasa a ser el objetivo actual)
+tecla →  buffer.Append(texto)
+Enter →  Flush()  →  paso Key ENTER
+```
+
+`ScriptGenerator.ToJavaPageObject` produce declaraciones `By` seguidas de las acciones. Si el locator de un paso no es
+único, emite `driver.findElements(by).get(i)` con el índice 0-based que calculó `UniquenessService`.
+
+![Vista Grabar acciones con pasos y script](img/03-grabar.png)
+
+Cada paso guarda su `CapturedObject` completo, así que **doble clic sobre un paso** abre el selector de candidatos y
+permite cambiar el locator sin volver a grabar; el script se regenera al vuelo.
+
+---
+
+## 9. Resaltado en pantalla (A3)
 
 `HighlightOverlay` es una ventana **transparente, sin bordes y click-through** (`WS_EX_TRANSPARENT | WS_EX_LAYERED |
 WS_EX_NOACTIVATE`) que dibuja un rectángulo rojo sobre el `BoundingRectangle` del elemento (~1.6s). No roba el foco ni
@@ -173,14 +213,14 @@ intercepta clics. Elementos sin área visible (contenedores lógicos, offscreen)
 
 ---
 
-## 9. Exportación
+## 10. Exportación
 
 Todo el historial de capturas se exporta a **JSON** (Escritorio), con `mouse`, `uiAutomation`, `msaa`, `win32` y los
 `candidates` de locator por cada objeto. Reutilizable como insumo para construir scripts o para documentar.
 
 ---
 
-## 10. Stack técnico
+## 11. Stack técnico
 
 - **.NET 8** + **C#** + **WinForms** (`UseWPF` habilita `System.Windows.Automation` sin NuGet).
 - **P/Invoke**: `user32` (hook, ventanas, hotkeys), `kernel32`, `oleacc` (MSAA).
@@ -188,7 +228,7 @@ Todo el historial de capturas se exporta a **JSON** (Escritorio), con `mouse`, `
 
 ---
 
-## 11. Limitaciones conocidas
+## 12. Limitaciones conocidas
 
 - **Privilegios**: si la app objetivo corre como administrador y la spy no, el hook/UIA puede fallar → ejecutar la spy
   también como administrador.

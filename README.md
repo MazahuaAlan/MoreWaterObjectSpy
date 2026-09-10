@@ -16,6 +16,15 @@
   <img alt="Estado" src="https://img.shields.io/badge/estado-activo-2ea44f">
 </p>
 
+<p align="center">
+  <img alt="Vista Capturas de MoreWater Object Spy" src="docs/img/01-capturas.png" width="900">
+</p>
+
+<p align="center">
+  <em>Un clic sobre cualquier control y ya tienes sus propiedades, sus locators rankeados y el recomendado.</em><br>
+  <a href="docs/GUIA_VISUAL.md"><strong>→ Guía visual completa</strong></a>
+</p>
+
 ---
 
 ## ¿Por qué existe?
@@ -64,10 +73,16 @@ desaparezca) y te entrega el **locator recomendado**, verificando además que se
   elegir otro locator entre los candidatos y regenerar.
 - **Configuración** y **Acerca de**.
 
+La vista **Árbol** explorando el Bloc de notas: jerarquía a la izquierda, propiedades y locators rankeados a la derecha.
+
+![Vista Árbol de elementos](docs/img/02-arbol.png)
+
 ## Grabador de acciones
 
 Pulsa **Grabar** y opera la app objetivo: cada clic se vuelve un paso y lo que escribes se agrupa por campo.
 El script se genera **mientras grabas**, en formato Page Object:
+
+![Vista Grabar acciones](docs/img/03-grabar.png)
 
 ```java
 // Declaraciones
@@ -86,6 +101,12 @@ driver.findElements(BTN_GUARDAR).get(2).click();  // objeto #3 de 5
 ```
 
 Puedes **copiar** el script o **exportarlo** a `.java`.
+
+## Apariencia
+
+Tema claro (Fluent, Windows 11) y tema oscuro con la paleta Docks:
+
+![Tema oscuro](docs/img/04-tema-oscuro.png)
 
 ## Requisitos
 
@@ -117,6 +138,7 @@ Salida: `bin\Release\net8.0-windows\win-x64\publish\MoreWaterObjectSpy.exe` (~70
 
 ## Documentación
 
+- 🖼️ **[`docs/GUIA_VISUAL.md`](docs/GUIA_VISUAL.md)** — guía gráfica: qué hace cada parte de cada vista, con capturas anotadas.
 - 🌐 **[Sitio de documentación](https://mazahuaalan.github.io/MoreWaterObjectSpy-docs/)**
 - [`docs/DOCUMENTACION_TECNICA.md`](docs/DOCUMENTACION_TECNICA.md) — arquitectura, flujo de captura y lógica de locators.
 
