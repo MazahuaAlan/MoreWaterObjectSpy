@@ -143,22 +143,6 @@ versión instalada y los enlaces a la documentación y al repositorio.
 
 ---
 
-## Regenerar estas imágenes
-
-Las capturas de esta guía no se toman a mano: las produce
-[`tools/generar-capturas.ps1`](tools/generar-capturas.ps1), que abre la aplicación, la maneja con UI Automation
-usando el Bloc de notas como objetivo, fotografía cada vista y dibuja los números.
-
-```powershell
-powershell -ExecutionPolicy Bypass -File docs\tools\generar-capturas.ps1
-```
-
-Ejecútalo al subir de versión, para que las imágenes muestren la versión nueva. No toques el ratón ni el teclado
-mientras corre. Revisa los PNG antes de commitear: si cambió el layout de una vista, los números pueden tapar texto
-y hay que ajustar sus coordenadas al final del script.
-
----
-
 <p align="center">
   MIT © <strong>MazahuaAlan</strong> · <a href="https://mazahuaalan.github.io/MoreWaterObjectSpy-docs/">Sitio de documentación</a>
 </p>
