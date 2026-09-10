@@ -11,7 +11,7 @@
   <img alt=".NET 8" src="https://img.shields.io/badge/.NET-8.0-512BD4">
   <img alt="C# WPF" src="https://img.shields.io/badge/C%23-WPF%20%2F%20Fluent-239120">
   <img alt="Windows" src="https://img.shields.io/badge/Windows-Desktop-0078D6">
-  <img alt="Version" src="https://img.shields.io/badge/versi%C3%B3n-0.5.3-EF4B4C">
+  <img alt="Version" src="https://img.shields.io/badge/versi%C3%B3n-0.5.4-EF4B4C">
   <img alt="Licencia MIT" src="https://img.shields.io/badge/licencia-MIT-blue">
   <img alt="Estado" src="https://img.shields.io/badge/estado-activo-2ea44f">
 </p>

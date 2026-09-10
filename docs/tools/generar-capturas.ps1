@@ -74,7 +74,15 @@ $candidatos = @(
   'MoreWaterObjectSpy\bin\Debug\net8.0-windows\MoreWaterObjectSpy.exe'
 )
 $EXE = $null
-foreach ($c in $candidatos) { $ruta = Join-Path $RAIZ $c; if (Test-Path $ruta) { $EXE = $ruta; break } }
+foreach ($c in $candidatos) {
+  $ruta = Join-Path $RAIZ $c
+  # Test-Path LANZA (no devuelve $false) si el archivo esta bloqueado o sin permiso
+  # de lectura: por ejemplo un publish a medias, o el exe abierto por red. Sin este
+  # try, el script aborta en vez de pasar al siguiente candidato.
+  $existe = $false
+  try { $existe = Test-Path -LiteralPath $ruta } catch { $existe = $false }
+  if ($existe) { $EXE = $ruta; break }
+}
 if (-not $EXE) { throw 'No encontre el ejecutable. Compila primero (dotnet build o dotnet publish).' }
 Write-Host "Ejecutable: $EXE"
 
